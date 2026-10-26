@@ -1,0 +1,13 @@
+; lang.xon -- what this bundle is.
+
+(lang "links")
+
+; Self-contained: this bundle depends on nothing but the platform.
+;
+; Helium, plus exactly the libraries this bundle imports and nothing
+; ambient: Markdown, the terminal, files and http, none of the tower.
+(dialect he)
+
+(requires-release "v0.39.1")
+
+(entry "run.x")
