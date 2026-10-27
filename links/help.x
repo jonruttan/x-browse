@@ -19,7 +19,7 @@
       "## Moving"
       ""
       "- `j` `Down`: a line down; `k` `Up`: a line up"
-      "- `Space` `f`: a page down; `b`: a page up"
+      "- `Space` `f` `PgDn`: a page down; `b` `PgUp`: a page up"
       "- `d`: half a page down; `u`: half a page up"
       "- `g` `Home`: the top; `G` `End`: the bottom"
       ""

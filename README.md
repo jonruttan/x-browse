@@ -17,7 +17,7 @@ shown as text.
 ## Keys
 
     j Down          a line down            k Up           a line up
-    Space f         a page down            b              a page up
+    Space f PgDn    a page down            b PgUp         a page up
     d               half a page down       u              half a page up
     g Home          the top                G End          the bottom
 
@@ -61,5 +61,4 @@ x-lang with `x/codec/markdown` and `x/tui` (x-lang#1101 and #1103).
 
 ## Not yet
 
-Searching, forms, HTML, and images other than their text.  PgUp and PgDn
-are not keys here: x's key reader names neither.
+Searching, forms, HTML, and images other than their text.
