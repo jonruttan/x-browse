@@ -13,16 +13,20 @@
 ; host.  `#FRAGMENT` names a heading of the document, by the slug
 ; GitHub gives it.
 ;
-; A document is (KIND . CONTENT): markdown with its blocks, or text with
-; its string.  A path ending .md, .markdown or .mdown, or a response
-; whose type is text/markdown, is Markdown; a directory is a Markdown
-; list of its entries; anything else is text.
+; A document is (KIND . CONTENT): markdown with its blocks, html with its
+; title (or nil) and then its blocks, or text with its string.  A path
+; ending .md, .markdown or .mdown, or a response whose type is
+; text/markdown, is Markdown; one ending .html or .htm, or a response
+; whose type is text/html, is HTML; a directory is a Markdown list of its
+; entries; anything else is text.  (doc-blocks DOC) answers the blocks of
+; either kind, as x/tui/page lays them out.
 
 (module browse/doc)
 
 (import x/sys/file)
 (import x/net/http)
 (import x/codec/markdown)
+(import x/codec/html)
 (import browse/help browse-help)
 
 ; --- locations ---------------------------------------------------------------
@@ -142,6 +146,13 @@
 
 (def %markdown (fn (_ text) (pair (lit markdown) (Markdown parse text))))
 
+(def %html-name?
+  (fn (_ loc)
+    (def l (Str8 downcase (first (%cut "?" loc))))
+    (if (Str8 ends? ".html" l) #t (Str8 ends? ".htm" l))))
+
+(def %html (fn (_ text) (pair (lit html) (pair (Html title text) (Html parse text)))))
+
 ; Markdown text listing the directory DIR, its entries linked, a
 ; directory's name ending /.
 (def %listing
@@ -170,10 +181,12 @@
     (unless (if (< 199 status) (< status 300) #f)
       (Err raise (lit io) (Str8 append "HTTP " (%number->str status)) url))
     (def text (bytes->str (rest (Assoc find (lit body) r))))
-    (if (if (Str8 starts? "text/markdown" (%header (rest (Assoc find (lit headers) r)) "content-type")) #t
-          (%markdown-name? url))
-      (%markdown text)
-      (pair (lit text) text))))
+    (def type (%header (rest (Assoc find (lit headers) r)) "content-type"))
+    (match ((Str8 starts? "text/markdown" type) (%markdown text))
+           ((Str8 starts? "text/html" type) (%html text))
+           ((%markdown-name? url) (%markdown text))
+           ((%html-name? url) (%html text))
+           (#t (pair (lit text) text)))))
 
 ; The document at LOC, (KIND . CONTENT).  Raises an Err when there is
 ; none to show.
@@ -189,7 +202,10 @@
         ((fn (_ type)
            (match ((eq? type (lit dir)) (%markdown (%listing path)))
                   ((eq? type (lit file))
-                    ((fn (_ text) (if (%markdown-name? path) (%markdown text) (pair (lit text) text)))
+                    ((fn (_ text)
+                       (match ((%markdown-name? path) (%markdown text))
+                              ((%html-name? path) (%html text))
+                              (#t (pair (lit text) text))))
                      (File read-all path)))
                   ((null? type) (Err raise (lit io) "no such file" path))
                   (#t (Err raise (lit io) "not a file to read" path))))
@@ -211,17 +227,26 @@
                  (#t (self (List ref 1 x)))))
         inlines))))
 
-; A document's title: its first heading's text, or the last part of LOC.
+; The blocks of a Markdown or HTML document; nil for text.
+(def doc-blocks
+  (fn (_ doc)
+    (match ((eq? (first doc) (lit markdown)) (rest doc))
+           ((eq? (first doc) (lit html)) (rest (rest doc)))
+           (#t ()))))
+
+; A document's title: an HTML page's <title>, else its first heading's
+; text, else the last part of LOC.
 (def doc-title
   (fn (_ loc doc)
-    (def h (if (eq? (first doc) (lit markdown))
-             (List find (fn (_ b) (eq? (first b) (lit heading))) (rest doc))
-             ()))
-    (if (null? h)
-      ((fn (_ p)
-         ((fn (_ q) (if (str=? q "") p q))
-          (List last (Str8 split "/" (if (Str8 ends? "/" p) (Str8 sub 0 (- (Str8 length p) 1) p) p)))))
-       (first (doc-fragment loc)))
-      (%inline-text (List ref 2 h)))))
+    (def t (if (eq? (first doc) (lit html)) (first (rest doc)) ()))
+    (def h (if (null? t) (List find (fn (_ b) (eq? (first b) (lit heading))) (doc-blocks doc)) ()))
+    (match
+      ((not (null? t)) t)
+      ((null? h)
+        ((fn (_ p)
+           ((fn (_ q) (if (str=? q "") p q))
+            (List last (Str8 split "/" (if (Str8 ends? "/" p) (Str8 sub 0 (- (Str8 length p) 1) p) p)))))
+         (first (doc-fragment loc))))
+      (#t (%inline-text (List ref 2 h))))))
 
-(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-title)
+(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-blocks doc-title)

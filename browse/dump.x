@@ -14,7 +14,7 @@
 
 (import x/type/vector)
 (import x/tui/page)
-(import browse/doc doc-resolve doc-load)
+(import browse/doc doc-resolve doc-load doc-blocks)
 
 ; INLINES with each link and image led by "[N]", N counted in BOX.
 (def %mark-inlines
@@ -54,7 +54,7 @@
 (def browse-dump
   (fn (_ loc width)
     (def doc (doc-load loc))
-    (if (eq? (first doc) (lit markdown))
+    (if (not (eq? (first doc) (lit text)))
       ((fn (_ page)
          (Str8 append
            (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines page)))
@@ -66,7 +66,7 @@
                      (Str8 append (Str8 pad-left 5 #\space (Str8 append (%number->str (+ k 1)) ".")) " "
                                   (doc-resolve loc (first (List ref k (Page links page)))) "\n"))
                    (List range 0 (List length (Page links page)))))))))
-       (Page markdown (%mark-blocks (rest doc) (Vector of 0)) width))
+       (Page markdown (%mark-blocks (doc-blocks doc) (Vector of 0)) width))
       (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width)))))))
 
 (provide browse/dump browse-dump)
