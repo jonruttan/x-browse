@@ -1,14 +1,14 @@
 # Locations and documents
 # @weight 1
 
-links/doc: where a link goes from the document it is in, the slug a
+browse/doc: where a link goes from the document it is in, the slug a
 heading's fragment names, and what loading a location answers.
 
 ## resolve
 
 ### a path against the document's directory, dots taken out
 
-```links
+```browse
 (write (list (doc-resolve "docs/a.md" "b.md") (doc-resolve "docs/a.md" "../b.md")
              (doc-resolve "docs/a.md" "./sub/../c.md#x") (doc-resolve "/srv/a.md" "/etc/b.md")
              (doc-resolve "a.md" "../../b.md") (doc-resolve "docs/a.md#top" "#end")
@@ -19,7 +19,7 @@ heading's fragment names, and what loading a location answers.
 
 ### a url against the document's url
 
-```links
+```browse
 (write (list (doc-resolve "https://h.org/a/b.md" "c.md") (doc-resolve "https://h.org/a/b.md" "/c.md")
              (doc-resolve "https://h.org/a/b.md" "../c.md") (doc-resolve "https://h.org" "c.md")
              (doc-resolve "http://h.org/a/" "//g.org/x") (doc-resolve "a.md" "mailto:me@h.org")
@@ -32,7 +32,7 @@ heading's fragment names, and what loading a location answers.
 
 ### lower case, spaces to hyphens, punctuation left out
 
-```links
+```browse
 (write (list (doc-slug "Second part") (doc-slug " Keys & tabs! ") (doc-slug "x-lang_v0.39")))
 ```
 ---
@@ -42,7 +42,7 @@ heading's fragment names, and what loading a location answers.
 
 ### a Markdown file, text, a directory, and what is not there
 
-```links
+```browse
 (write (list (first (doc-load "tests/fixtures/index.md")) (doc-load "tests/fixtures/notes.txt")
              (doc-title "tests/fixtures/index.md" (doc-load "tests/fixtures/index.md"))
              (doc-title "tests/fixtures/notes.txt" (doc-load "tests/fixtures/notes.txt"))
@@ -57,8 +57,8 @@ heading's fragment names, and what loading a location answers.
 
 ### lynx's: link text led by its number, the references after
 
-```links
-(write (links-dump "tests/fixtures/index.md" 40))
+```browse
+(write (browse-dump "tests/fixtures/index.md" 40))
 ```
 ---
     "Fixtures\n\nA [1]page and the [2]same page.\n\n• Italic and bold\n• [3]Back home\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/sub/page.md#second-part\n   3. tests/fixtures/index.md\n"

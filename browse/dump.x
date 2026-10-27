@@ -1,6 +1,6 @@
-; # x-links -- a terminal browser on x-lang
+; # x-browse -- a terminal browser on x-lang
 ;
-; ## links/dump.x -- -dump: a document as text
+; ## browse/dump.x -- -dump: a document as text
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
@@ -10,11 +10,11 @@
 ; it, each link's text led by its number in brackets, and after it a
 ; list of where the links go, by number.
 
-(module links/dump)
+(module browse/dump)
 
 (import x/type/vector)
 (import x/tui/page)
-(import links/doc doc-resolve doc-load)
+(import browse/doc doc-resolve doc-load)
 
 ; INLINES with each link and image led by "[N]", N counted in BOX.
 (def %mark-inlines
@@ -51,7 +51,7 @@
     (List map (fn (_ i) (Str8 trim-right (Page line-text page i))) (List range 0 (Page count page)))))
 
 ; The document at LOC as -dump writes it, WIDTH wide.
-(def links-dump
+(def browse-dump
   (fn (_ loc width)
     (def doc (doc-load loc))
     (if (eq? (first doc) (lit markdown))
@@ -69,4 +69,4 @@
        (Page markdown (%mark-blocks (rest doc) (Vector of 0)) width))
       (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width)))))))
 
-(provide links/dump links-dump)
+(provide browse/dump browse-dump)

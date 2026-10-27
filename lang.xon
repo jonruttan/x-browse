@@ -1,6 +1,6 @@
 ; lang.xon -- what this bundle is.
 
-(lang "links")
+(lang "browse")
 
 ; Self-contained: this bundle depends on nothing but the platform.
 ;

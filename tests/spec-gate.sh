@@ -1,5 +1,5 @@
 #!/bin/sh
-# # x-links -- a terminal browser on x-lang
+# # x-browse -- a terminal browser on x-lang
 #
 # ## tests/spec-gate.sh -- shim onto the lang kit's gate
 #
@@ -21,7 +21,7 @@ X="${X:-x}"
 
 KIT="${X_LANG_KIT:-$("$X" --share-dir)/tools/lang-kit}"
 [ -f "$KIT/spec-gate.sh" ] || {
-	echo "x-links: no lang kit at $KIT -- set X_LANG_KIT or upgrade x" >&2
+	echo "x-browse: no lang kit at $KIT -- set X_LANG_KIT or upgrade x" >&2
 	exit 2
 }
 

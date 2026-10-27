@@ -1,10 +1,10 @@
 #!/bin/sh
-# # x-links -- a terminal browser on x-lang
+# # x-browse -- a terminal browser on x-lang
 #
 # ## tests/gen-harness.sh -- shim onto the lang kit's harness generator
 #
 # @description Writes tests/lib/harness.gen.x with the platform's generator:
-#   the dialect lang.xon declares, booted as `x -l links` boots it, then the
+#   the dialect lang.xon declares, booted as `x -l browse` boots it, then the
 #   bundle's own tests/harness.x.
 # @author [Jon Ruttan](jonruttan@gmail.com)
 # @copyright 2026 Jon Ruttan
@@ -21,7 +21,7 @@ BUNDLE="$2"
 
 KIT="${X_LANG_KIT:-$X_ROOT/tools/lang-kit}"
 [ -f "$KIT/gen-harness.sh" ] || {
-	echo "x-links: no harness generator at $KIT -- set X_LANG_KIT, or point X at an x-lang checkout" >&2
+	echo "x-browse: no harness generator at $KIT -- set X_LANG_KIT, or point X at an x-lang checkout" >&2
 	exit 2
 }
 

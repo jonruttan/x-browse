@@ -1,6 +1,6 @@
-; # x-links -- a terminal browser on x-lang
+; # x-browse -- a terminal browser on x-lang
 ;
-; ## links/doc.x -- locations, and the documents found at them
+; ## browse/doc.x -- locations, and the documents found at them
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
@@ -18,12 +18,12 @@
 ; whose type is text/markdown, is Markdown; a directory is a Markdown
 ; list of its entries; anything else is text.
 
-(module links/doc)
+(module browse/doc)
 
 (import x/sys/file)
 (import x/net/http)
 (import x/codec/markdown)
-(import links/help links-help)
+(import browse/help browse-help)
 
 ; --- locations ---------------------------------------------------------------
 
@@ -181,7 +181,7 @@
   (fn (_ loc)
     (def path (first (doc-fragment loc)))
     (match
-      ((str=? path "about:help") (%markdown links-help))
+      ((str=? path "about:help") (%markdown browse-help))
       ((doc-web? path) (%fetch path))
       ((Str8 starts? "file://" path) (doc-load (Str8 sub 7 (- (Str8 length loc) 7) loc)))
       ((doc-scheme? path) (Err raise (lit value) "no way to open this" path))
@@ -224,4 +224,4 @@
        (first (doc-fragment loc)))
       (%inline-text (List ref 2 h)))))
 
-(provide links/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-title)
+(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-title)
