@@ -52,7 +52,8 @@ the links go.
 
 ## Requirements
 
-x-lang with `x/codec/markdown` and `x/tui` (x-lang#1101 and #1103).
+x-lang v0.41.0: `x/codec/markdown` and `x/tui` (x-lang#1101 and #1103), and
+`Term key` naming Page Up and Page Down (#1105).
 
 ## Tests
 
