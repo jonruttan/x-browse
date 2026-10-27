@@ -75,3 +75,14 @@ time: the tab bar, the window, and the status line.
 ```
 ---
     "…path/to/home.md  1-4/11"
+
+## paging
+
+### PgDn and PgUp move a page, as Space and b do
+
+```links
+(write (list (List ref 1 (spec-screen (spec-browse 6 24 spec-pages "home.md" (list 'page-down)) 6 24))
+             (List ref 1 (spec-screen (spec-browse 6 24 spec-pages "home.md" (list 'page-down 'page-up)) 6 24))))
+```
+---
+    ("line" "Home")
