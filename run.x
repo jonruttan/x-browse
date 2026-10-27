@@ -1,22 +1,22 @@
-; # x-links -- a terminal browser on x-lang
+; # x-browse -- a terminal browser on x-lang
 ;
 ; ## run.x -- the entry
 ;
-; @description `x -l links -- [OPTIONS] [LOCATION ...]`.
+; @description `x -l browse -- [OPTIONS] [LOCATION ...]`.
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
-(import links/base)
+(import browse/base)
 
-(set! %lang-name "links")
-(set! %repl-prompt "links> ")
+(set! %lang-name "browse")
+(set! %repl-prompt "browse> ")
 
 ; The operands: what follows the "--" after the launcher's own options.
 ; x-os's launcher passes the engine's own flags ahead of them, with no
-; "--" between; they are left out, so `x -l links` there is a REPL too.
+; "--" between; they are left out, so `x -l browse` there is a REPL too.
 (def %engine-flag?
   (fn (_ a) (List any? (fn (_ f) (str=? a f)) (list "--batch" "--quiet" "--no-color"))))
 (def %operands
   (fn (self l) (if (if (null? l) #f (%engine-flag? (first l))) (self (rest l)) l)))
 (let ((ops (%operands (rest (Sys args (lit program))))))
-  (unless (null? ops) (Sys exit (links-main ops))))
+  (unless (null? ops) (Sys exit (browse-main ops))))

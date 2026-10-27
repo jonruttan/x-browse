@@ -1,6 +1,6 @@
-; # x-links -- a terminal browser on x-lang
+; # x-browse -- a terminal browser on x-lang
 ;
-; ## links/browse.x -- tabs of documents, the keys, and what is drawn
+; ## browse/browser.x -- tabs of documents, the keys, and what is drawn
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
@@ -17,7 +17,7 @@
 ; Documents are loaded by the browser's loader, (doc-load LOC) unless
 ; one is given: a spec loads from a list instead.
 
-(module links/browse)
+(module browse/browser)
 
 (import x/type/vector)
 (import x/codec/utf8 utf8-cp-at utf8-width)
@@ -27,7 +27,7 @@
 (import x/tui/page)
 (import x/tui/window)
 (import x/tui/tabs)
-(import links/doc doc-resolve doc-fragment doc-slug doc-load doc-title)
+(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-title)
 
 ; A browser is a vector: 0 the tabs, 1 each tab's state in the tabs'
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
@@ -323,5 +323,5 @@
     (%draw-status! b screen)
     screen))
 
-(provide links/browse browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
+(provide browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
   browse-repaint? browse-tabs browse-location browse-message)

@@ -1,4 +1,4 @@
-; # x-links -- a terminal browser on x-lang
+; # x-browse -- a terminal browser on x-lang
 ;
 ; ## tests/harness.x -- what the spec harness adds to the dialect
 ;
@@ -8,7 +8,7 @@
 ;
 ; The lang kit's generator writes tests/lib/harness.gen.x: the dialect
 ; lang.xon declares, the bundle's root on the import path, then this file.
-(import links/base)
+(import browse/base)
 (import x/sys/gc)
 (import x/codec/markdown)
 (import x/tui/screen)

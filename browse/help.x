@@ -1,17 +1,17 @@
-; # x-links -- a terminal browser on x-lang
+; # x-browse -- a terminal browser on x-lang
 ;
-; ## links/help.x -- about:help, the keys
+; ## browse/help.x -- about:help, the keys
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
 
-(module links/help)
+(module browse/help)
 
-(def links-help
+(def browse-help
   (Str8 join "\n"
     (list
-      "# x-links"
+      "# x-browse"
       ""
       "A Markdown browser.  The bar at the top lists the tabs; the line at the"
       "bottom shows the selected link, or where this document is."
@@ -47,4 +47,4 @@
       "A location is a path, an `http://` or `https://` url, or `about:help`."
       "")))
 
-(provide links/help links-help)
+(provide browse/help browse-help)

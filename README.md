@@ -1,11 +1,11 @@
-# x-links
+# x-browse
 
 A terminal browser on x-lang, in the vein of lynx, links and w3m, as a
 lang bundle.  It browses Markdown: headings, bold, italic, code, quotes,
 lists and links drawn with the terminal's attributes, in tabs.
 
-    x -l links -- [LOCATION ...]
-    x -l links -- -dump [-width N] LOCATION
+    x -l browse -- [LOCATION ...]
+    x -l browse -- -dump [-width N] LOCATION
 
 A location is a path, an `http://` or `https://` url, or `about:help`.
 Each location given opens in a tab of its own; with none, the browser

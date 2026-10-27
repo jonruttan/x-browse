@@ -1,5 +1,5 @@
 #!/bin/sh
-# # x-links -- a terminal browser on x-lang
+# # x-browse -- a terminal browser on x-lang
 #
 # ## tests/spec-runner.sh -- the bundle's runner
 #
@@ -19,7 +19,7 @@ BUNDLE="$(cd "$(dirname "$0")/.." && pwd)"
 X="${X:-x}"
 
 command -v "$X" >/dev/null 2>&1 || {
-	echo "x-links: no x on PATH.  Set X=/path/to/x.sh and retry." >&2
+	echo "x-browse: no x on PATH.  Set X=/path/to/x.sh and retry." >&2
 	exit 1
 }
 
@@ -42,7 +42,7 @@ SPEC_PATH="${SPEC_PATH:-$BUNDLE/tests/specs}"
 
 # The suite boots from a state image of the harness when the platform can write
 # one. tools/dev/image-build.sh images a child that loaded the harness, keyed on
-# what it depends on (the harness, the platform's lib/, its engine, and links/), so
+# what it depends on (the harness, the platform's lib/, its engine, and browse/), so
 # an edit to any of them rewrites the image and a current one is reused.
 #
 # The image writer is a checkout tool: an installed tree has none, and a library
@@ -60,13 +60,13 @@ else
 	"$X" -f "$_probe" >/dev/null 2>&1 && _keeps_printer=1
 	rm -f "$_probe"
 	if [ ! -f "$_builder" ]; then
-		echo "x-links: no image writer at $_builder (not a checkout) -- the suite boots from source" >&2
+		echo "x-browse: no image writer at $_builder (not a checkout) -- the suite boots from source" >&2
 	elif [ "$_keeps_printer" = 0 ]; then
-		echo "x-links: the platform moves a REPL printer it does not own (x-lang#655) -- the suite boots from source" >&2
-	elif X_BIN="$X_BIN" sh "$_builder" "$LANG_LIB" "$BUNDLE/tests/lib/.images" "$BUNDLE/links"; then
+		echo "x-browse: the platform moves a REPL printer it does not own (x-lang#655) -- the suite boots from source" >&2
+	elif X_BIN="$X_BIN" sh "$_builder" "$LANG_LIB" "$BUNDLE/tests/lib/.images" "$BUNDLE/browse"; then
 		X_IMG_DIR="$BUNDLE/tests/lib/.images"; export X_IMG_DIR
 	else
-		echo "x-links: no state image -- the suite boots from source" >&2
+		echo "x-browse: no state image -- the suite boots from source" >&2
 	fi
 fi
 
