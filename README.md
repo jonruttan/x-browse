@@ -24,11 +24,14 @@ anything else is shown as text.
     d               half a page down       u              half a page up
     g Home          the top                G End          the bottom
 
-    Tab n           the next link          p N            the previous link
+    Tab             the next link          p              the previous link
     Enter Right l   follow the link        t              follow it in a new tab
     Left h BS       back
     o               open a location        O              open one in a new tab
     r               load the document again
+
+    / Ctrl-S        search for text        n              the next match
+                                           N              the previous match
 
     ] >             the next tab           [ <            the previous tab
     1-9             that tab               x              close this tab
@@ -46,6 +49,11 @@ resolves a relative url.  A link's `#fragment` goes to the heading whose
 GitHub slug it is.  Each tab keeps the documents it came from; going
 back shows one where it was left, the same link selected.
 
+A search is for text in any case, from the top line shown: the line it
+is found on goes to the top.  `n` looks on from the last match while it
+is on the screen, otherwise from the top line; `N` looks back the same
+way.  `/` with nothing typed searches for the last text again.
+
 ## -dump
 
 `-dump` writes the document as text on standard output, laid out `-width`
@@ -55,7 +63,9 @@ the links go.
 
 ## Requirements
 
-x-lang with `x/codec/markdown`, `x/codec/html` and `x/tui`.
+x-lang v0.41.0: `x/codec/markdown` and `x/tui` (x-lang#1101 and #1103), and
+`Term key` naming Page Up and Page Down (#1105); and `x/codec/html`
+(x-lang#1122).
 
 ## Tests
 
@@ -64,4 +74,4 @@ x-lang with `x/codec/markdown`, `x/codec/html` and `x/tui`.
 
 ## Not yet
 
-Searching, forms, and images other than their text.
+Forms, and images other than their text.
