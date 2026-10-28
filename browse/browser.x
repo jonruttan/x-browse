@@ -11,8 +11,9 @@
 ; It takes keys as x/repl/term's (Term key) decodes them and draws on a
 ; screen (x/tui/screen): the tab bar on the first row, the current tab's
 ; window below it, and on the last row the selected link, the location,
-; a message, or a question being typed.  Nothing here touches a
-; terminal, so a spec drives it with keys and reads the screen back.
+; a message, or a question being typed: a location to open, or text to
+; search for.  Nothing here touches a terminal, so a spec drives it with
+; keys and reads the screen back.
 ;
 ; Documents are loaded by the browser's loader, (doc-load LOC) unless
 ; one is given: a spec loads from a list instead.
@@ -32,9 +33,11 @@
 ; A browser is a vector: 0 the tabs, 1 each tab's state in the tabs'
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
 ; asked, 6 whether to quit, 7 the loader, 8 whether the screen is to be
-; drawn whole.  A tab's state is a vector: 0 the location, 1 the
+; drawn whole, 9 the text last searched for, 10 the line it was found
+; on, or nil.  A tab's state is a vector: 0 the location, 1 the
 ; document, 2 the history, newest first, each (LOCATION DOCUMENT TOP
-; SELECTED).  A question is (WHERE . TEXT): WHERE here or tab.
+; SELECTED).  A question is (WHAT . TEXT): WHAT here or tab for a
+; location to open there, or search.
 (def %quot (prim-ref (lit int) (lit /)))
 (def %and (prim-ref (lit int) (lit &)))
 (def %min (fn (_ a b) (if (< a b) a b)))
@@ -172,7 +175,7 @@
 
 (def browse-make
   (fn (_ rows cols . loader)
-    (def b (Vector make 9 ()))
+    (def b (Vector make 11 ()))
     (%put! b 0 (Tabs make))
     (%put! b 2 rows)
     (%put! b 3 cols)
@@ -193,13 +196,53 @@
          (if (= (%and (Char ->int (Str8 ref (- i 1) text)) 192) 128) (self (- i 1)) (Str8 sub 0 (- i 1) text))))
      (Str8 length text))))
 
+; --- searching ---------------------------------------------------------------
+
+; The line of PAGE, from I onwards in direction D (1 down, -1 up), whose
+; text has TEXT in it, any case; nil with none.
+(def %find
+  (fn (self page text i d)
+    (match ((< i 0) ())
+           ((< (Page count page) (+ i 1)) ())
+           ((Str8 includes? text (Str8 downcase (Page line-text page i))) i)
+           (#t (self page text (+ i d) d)))))
+
+; The next match (D 1) or the previous (D -1) of the text last searched
+; for, put on the first row: past the last match while it is on the
+; screen, else from the screen's top line.
+(def %search-on!
+  (fn (_ b d)
+    (def w (%window b))
+    (def n (%body-rows b))
+    (def top (Window top w))
+    (def m (%get b 10))
+    (def shown? (if (null? m) #f (if (< m top) #f (< m (+ top n)))))
+    (def line
+      (%find (Window page w) (Str8 downcase (%get b 9)) (match (shown? (+ m d)) ((< d 0) (- top 1)) (#t top)) d))
+    (if (null? line) (%say! b (Str8 append "not found " (if (< d 0) "above" "below") ": " (%get b 9)))
+      (do (%put! b 10 line) (Window go w line n)))))
+
+(def %search-next!
+  (fn (_ b d)
+    (if (null? (%get b 9)) (%say! b "nothing to search for") (%search-on! b d))))
+
+; TEXT searched for from the screen's top line; an empty TEXT is the
+; last one again.
+(def %search!
+  (fn (_ b text)
+    (unless (str=? text "") (%put! b 9 text))
+    (%put! b 10 ())
+    (%search-next! b 1)))
+
 (def %ask-key!
   (fn (_ b key)
     (def q (%get b 5))
     (match
       ((%key? key (list (lit enter)))
         (do (%put! b 5 ())
-            (unless (str=? (rest q) "") (browse-open! b (rest q) (first q)))))
+            (match ((eq? (first q) (lit search)) (%search! b (rest q)))
+                   ((str=? (rest q) "") ())
+                   (#t (browse-open! b (rest q) (first q))))))
       ((%key? key (list (lit escape) (lit abort) (lit interrupt))) (%put! b 5 ()))
       ((%key? key (list (lit backspace))) (%put! b 5 (pair (first q) (%chop (rest q)))))
       ((str? key) (%put! b 5 (pair (first q) (Str8 append (rest q) key))))
@@ -225,10 +268,13 @@
           ((%key? key (list "u")) (%scroll! b (- 0 (%quot (+ n 1) 2))))
           ((%key? key (list "g" (lit home))) (Window go (%window b) 0 n))
           ((%key? key (list "G" (lit end))) (Window go (%window b) (Page count (Window page (%window b))) n))
-          ((%key? key (list "n" (lit complete)))
+          ((%key? key (list (lit complete)))
             (when (null? (Window next-link (%window b) n)) (%say! b "no more links")))
-          ((%key? key (list "p" "N"))
+          ((%key? key (list "p"))
             (when (null? (Window prev-link (%window b) n)) (%say! b "no more links")))
+          ((%key? key (list "/" (lit search-forward))) (%put! b 5 (pair (lit search) "")))
+          ((%key? key (list "n")) (%search-next! b 1))
+          ((%key? key (list "N")) (%search-next! b -1))
           ((%key? key (list "l" (lit enter) (lit right))) (%follow! b (lit here)))
           ((%key? key (list "t")) (%follow! b (lit tab)))
           ((%key? key (list "h" (lit left) (lit backspace))) (%back! b))
@@ -298,7 +344,11 @@
                      (%number->str (%min count (+ (Window top w) (%body-rows b)))) "/" (%number->str count)))
          (Page count (Window page w)))))
     (def left
-      (match ((not (null? q)) (Str8 append (if (eq? (first q) (lit tab)) "Open in a new tab: " "Open: ") (rest q)))
+      (match ((not (null? q))
+               (Str8 append (match ((eq? (first q) (lit tab)) "Open in a new tab: ")
+                                   ((eq? (first q) (lit search)) "Search: ")
+                                   (#t "Open: "))
+                            (rest q)))
              ((not (null? (%get b 4))) (%get b 4))
              ((null? w) "")
              ((not (null? (Window selected w))) (%target b))

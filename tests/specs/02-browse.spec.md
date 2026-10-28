@@ -86,3 +86,31 @@ time: the tab bar, the window, and the status line.
 ```
 ---
     ("line" "Home")
+
+## searching
+
+### / asks for text; Enter finds it from the top, any case; n and N move between matches
+
+```browse
+(def b (spec-browse 6 24 spec-pages "home.md" (list "/" "LINE")))
+(def row (fn (_ k) (List ref k (spec-screen b 6 24))))
+(write (list (row 5)
+             (do (browse-key! b 'enter) (row 1))
+             (do (browse-key! b "n") (browse-key! b "n") (row 5))
+             (do (browse-key! b "n") (browse-message b))
+             (do (browse-key! b "N") (row 5))
+             (do (browse-key! b "N") (browse-key! b "N") (browse-message b))))
+```
+---
+    ("Search: LINE" "line" "home.md          8-11/11" "not found below: LINE" "home.md          7-10/11" "not found above: LINE")
+
+### n before any search says so; / with nothing typed searches for the last text again
+
+```browse
+(def b (spec-browse 6 24 spec-pages "home.md" (list "n")))
+(write (list (browse-message b)
+             (do (List for-each (fn (_ k) (browse-key! b k)) (list "/" "last" 'enter "g" "/" 'enter))
+                 (List ref 4 (spec-screen b 6 24)))))
+```
+---
+    ("nothing to search for" "last")
