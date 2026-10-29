@@ -8,6 +8,6 @@
 ; ambient: Markdown, the terminal, files and http, none of the tower.
 (dialect he)
 
-(requires-release "v0.41.0")
+(requires-release "v0.42.0")
 
 (entry "run.x")
