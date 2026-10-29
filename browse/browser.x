@@ -28,7 +28,7 @@
 (import x/tui/page)
 (import x/tui/window)
 (import x/tui/tabs)
-(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-title)
+(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-blocks doc-title)
 
 ; A browser is a vector: 0 the tabs, 1 each tab's state in the tabs'
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
@@ -56,7 +56,7 @@
 
 (def %page
   (fn (_ doc width)
-    (if (eq? (first doc) (lit markdown)) (Page markdown (rest doc) width) (Page text (rest doc) width))))
+    (if (eq? (first doc) (lit text)) (Page text (rest doc) width) (Page markdown (doc-blocks doc) width))))
 
 (def %err-text
   (fn (_ e)

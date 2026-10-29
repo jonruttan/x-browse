@@ -62,3 +62,23 @@ heading's fragment names, and what loading a location answers.
 ```
 ---
     "Fixtures\n\nA [1]page and the [2]same page.\n\n• Italic and bold\n• [3]Back home\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/sub/page.md#second-part\n   3. tests/fixtures/index.md\n"
+
+## html
+
+### an HTML file: its title, its blocks as Markdown's, and its links resolved as Markdown's are
+
+```browse
+(def d (doc-load "tests/fixtures/page.html"))
+(write (list (first d) (doc-title "tests/fixtures/page.html" d) (doc-blocks d)
+             (doc-title "tests/fixtures/sub/page.md" (doc-load "tests/fixtures/sub/page.md"))))
+```
+---
+    ('html "A Page & its title" (('heading 1 ("Fixture Page")) ('paragraph ("A " ('link "sub/page.md" () ("page")) " and " ('link "index.md" "home" ("home")) ", with " ('strong ("bold")) ", " ('emph ("italic")) " and " ('code "code") ".")) ('list #f () #t ((('paragraph ("one"))) (('paragraph ("two an image"))))) ('paragraph (('strong ("Name")) " | " ('strong ("Value")))) ('paragraph ("a | 1")) ('code-block "" "kept   as\n  written\n")) "A page")
+
+### -dump of an HTML page: the links numbered and resolved against it
+
+```browse
+(write (browse-dump "tests/fixtures/page.html" 40))
+```
+---
+    "Fixture Page\n\nA [1]page and [2]home, with bold, italic\nand code.\n\n• one\n• two an image\n\nName | Value\n\na | 1\n\nkept   as\n  written\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/index.md\n"

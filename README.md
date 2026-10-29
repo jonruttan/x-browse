@@ -1,8 +1,9 @@
 # x-browse
 
 A terminal browser on x-lang, in the vein of lynx, links and w3m, as a
-lang bundle.  It browses Markdown: headings, bold, italic, code, quotes,
-lists and links drawn with the terminal's attributes, in tabs.
+lang bundle.  It browses Markdown and HTML: headings, bold, italic,
+code, quotes, lists and links drawn with the terminal's attributes, in
+tabs.
 
     x -l browse -- [LOCATION ...]
     x -l browse -- -dump [-width N] LOCATION
@@ -10,9 +11,11 @@ lists and links drawn with the terminal's attributes, in tabs.
 A location is a path, an `http://` or `https://` url, or `about:help`.
 Each location given opens in a tab of its own; with none, the browser
 opens the current directory.  A file ending `.md`, `.markdown` or
-`.mdown`, or a response of type `text/markdown`, is read as Markdown; a
-directory is shown as a list of its entries, linked; anything else is
-shown as text.
+`.mdown`, or a response of type `text/markdown`, is read as Markdown; one
+ending `.html` or `.htm`, or a response of type `text/html`, as HTML,
+shown as the same headings, lists, quotes, code and links, a table as a
+line a row; a directory is shown as a list of its entries, linked;
+anything else is shown as text.
 
 ## Keys
 
@@ -60,8 +63,8 @@ the links go.
 
 ## Requirements
 
-x-lang v0.41.0: `x/codec/markdown` and `x/tui` (x-lang#1101 and #1103), and
-`Term key` naming Page Up and Page Down (#1105).
+x-lang v0.42.0: `x/codec/markdown`, `x/codec/html` and `x/tui`, and `Term key`
+naming Page Up and Page Down.
 
 ## Tests
 
@@ -70,4 +73,4 @@ x-lang v0.41.0: `x/codec/markdown` and `x/tui` (x-lang#1101 and #1103), and
 
 ## Not yet
 
-Forms, HTML, and images other than their text.
+Forms, and images other than their text.
