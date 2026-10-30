@@ -7,11 +7,11 @@
 ; @license MIT No Attribution (MIT-0)
 
 (provide browse/base browse-version browse-main browse-dump
-  doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-blocks doc-title
+  doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query
   browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit? browse-tabs
   browse-location browse-message)
 
-(import browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-blocks doc-title)
+(import browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query)
 (import browse/dump browse-dump)
 (import browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
   browse-tabs browse-location browse-message)

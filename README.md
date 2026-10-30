@@ -2,8 +2,8 @@
 
 A terminal browser on x-lang, in the vein of lynx, links and w3m, as a
 lang bundle.  It browses Markdown and HTML: headings, bold, italic,
-code, quotes, lists and links drawn with the terminal's attributes, in
-tabs.
+code, quotes, lists, links and forms drawn with the terminal's
+attributes, in tabs.
 
     x -l browse -- [LOCATION ...]
     x -l browse -- -dump [-width N] LOCATION
@@ -24,11 +24,15 @@ anything else is shown as text.
     d               half a page down       u              half a page up
     g Home          the top                G End          the bottom
 
-    Tab             the next link          p              the previous link
+    Tab             the next link or field p              the previous one
     Enter Right l   follow the link        t              follow it in a new tab
     Left h BS       back
     o               open a location        O              open one in a new tab
     r               load the document again
+
+    Enter           on a text field, type its text; on a checkbox or a radio
+                    button, turn it on or off; on a select, its next option;
+                    on a button, send the form (t sends it to a new tab)
 
     / Ctrl-S        search for text        n              the next match
                                            N              the previous match
@@ -54,17 +58,27 @@ is found on goes to the top.  `n` looks on from the last match while it
 is on the screen, otherwise from the top line; `N` looks back the same
 way.  `/` with nothing typed searches for the last text again.
 
+A form's fields are drawn as lynx draws them: a text field as its text
+padded with underscores, a checkbox as `[ ]` or `[X]`, a radio button as
+`( )` or `(*)`, a select as its chosen option in brackets, a button as
+its label in brackets.  They are selected as links are, and the bottom
+line says what the selected one is.  `Enter` on a button sends the form:
+by GET it opens the action with the fields as the query, by POST it
+sends them as the body, `application/x-www-form-urlencoded`.  What is
+typed into a form stays with the document in its tab, so going back
+finds it as it was left.
+
 ## -dump
 
 `-dump` writes the document as text on standard output, laid out `-width`
 columns wide (80 when not given), as lynx's `-dump` does: each link's text
-led by its number in brackets, and after the document the list of where
-the links go.
+led by its number in brackets, a form's fields drawn as the browser draws
+them, and after the document the list of where the links go.
 
 ## Requirements
 
-x-lang v0.42.0: `x/codec/markdown`, `x/codec/html` and `x/tui`, and `Term key`
-naming Page Up and Page Down.
+x-lang v0.44.0: `x/codec/markdown`, `x/codec/html` with forms, and `x/tui`
+with fields, and `Term key` naming Page Up and Page Down.
 
 ## Tests
 
@@ -73,4 +87,4 @@ naming Page Up and Page Down.
 
 ## Not yet
 
-Forms, and images other than their text.
+Images other than their text, and files sent from a form.

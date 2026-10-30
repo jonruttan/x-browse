@@ -19,7 +19,14 @@
 ; text/markdown, is Markdown; one ending .html or .htm, or a response
 ; whose type is text/html, is HTML; a directory is a Markdown list of its
 ; entries; anything else is text.  (doc-blocks DOC) answers the blocks of
-; either kind, as x/tui/page lays them out.
+; either kind, as x/tui/page lays them out.  A form sent by POST loads
+; its action with the method and the body, (doc-load LOC post BODY), the
+; body a query (doc-query) answers: application/x-www-form-urlencoded.
+;
+; A web location that redirects answers (at URL . DOC), URL where the
+; document came from: (doc-at LOC DOC) answers (LOC . DOC) with that
+; taken out, the location the final one, keeping LOC's fragment, so
+; links and forms resolve against the page as it was served.
 
 (module browse/doc)
 
@@ -175,27 +182,44 @@
     (if (null? h) "" (Str8 downcase (rest h)))))
 
 (def %fetch
-  (fn (_ url)
-    (def r (Http get (first (doc-fragment url))))
+  (fn (_ url method body)
+    (def r (if (eq? method (lit post))
+             (Http post (first (doc-fragment url)) body (list (pair "Content-Type" "application/x-www-form-urlencoded")))
+             (Http get (first (doc-fragment url)))))
     (def status (rest (Assoc find (lit status) r)))
     (unless (if (< 199 status) (< status 300) #f)
       (Err raise (lit io) (Str8 append "HTTP " (%number->str status)) url))
     (def text (bytes->str (rest (Assoc find (lit body) r))))
     (def type (%header (rest (Assoc find (lit headers) r)) "content-type"))
-    (match ((Str8 starts? "text/markdown" type) (%markdown text))
-           ((Str8 starts? "text/html" type) (%html text))
-           ((%markdown-name? url) (%markdown text))
-           ((%html-name? url) (%html text))
-           (#t (pair (lit text) text)))))
+    (def from ((fn (_ p) (if (null? p) (first (doc-fragment url)) (rest p))) (Assoc find (lit url) r)))
+    (def doc
+      (match ((Str8 starts? "text/markdown" type) (%markdown text))
+             ((Str8 starts? "text/html" type) (%html text))
+             ((%markdown-name? from) (%markdown text))
+             ((%html-name? from) (%html text))
+             (#t (pair (lit text) text))))
+    (if (str=? from (first (doc-fragment url))) doc (pair (lit at) (pair from doc)))))
 
-; The document at LOC, (KIND . CONTENT).  Raises an Err when there is
-; none to show.
+; LOC and DOC as (LOC . DOC), a redirected document's (at URL . DOC)
+; taken out: its location URL, with LOC's fragment when URL has none.
+(def doc-at
+  (fn (_ loc doc)
+    (if (not (eq? (first doc) (lit at))) (pair loc doc)
+      ((fn (_ url frag)
+         (pair (if (if (null? frag) #t (not (null? (rest (doc-fragment url))))) url (Str8 append url "#" frag))
+               (rest (rest doc))))
+       (first (rest doc)) (rest (doc-fragment loc))))))
+
+; The document at LOC, (KIND . CONTENT); a web location is asked by
+; METHOD, get unless given, with BODY.  Raises an Err when there is none
+; to show.
 (def doc-load
-  (fn (_ loc)
+  (fn (_ loc . more)
     (def path (first (doc-fragment loc)))
     (match
       ((str=? path "about:help") (%markdown browse-help))
-      ((doc-web? path) (%fetch path))
+      ((doc-web? path)
+        (%fetch path (if (null? more) (lit get) (first more)) (if (null? more) () (List ref 1 more))))
       ((Str8 starts? "file://" path) (doc-load (Str8 sub 7 (- (Str8 length loc) 7) loc)))
       ((doc-scheme? path) (Err raise (lit value) "no way to open this" path))
       (#t
@@ -210,6 +234,15 @@
                   ((null? type) (Err raise (lit io) "no such file" path))
                   (#t (Err raise (lit io) "not a file to read" path))))
          (File type path))))))
+
+; PARAMS, ((NAME . VALUE) ...), as a form sends them: each percent-encoded,
+; a space a +, name=value joined by &.
+(def doc-query
+  (fn (_ params)
+    (Str8 join "&"
+      (List map
+        (fn (_ p) (Str8 replace "%20" "+" (Str8 append (Http url-encode (first p)) "=" (Http url-encode (rest p)))))
+        params))))
 
 ; The plain text of INLINES.
 (def %inline-text
@@ -249,4 +282,4 @@
          (first (doc-fragment loc))))
       (#t (%inline-text (List ref 2 h))))))
 
-(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-blocks doc-title)
+(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query)

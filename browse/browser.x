@@ -11,12 +11,21 @@
 ; It takes keys as x/repl/term's (Term key) decodes them and draws on a
 ; screen (x/tui/screen): the tab bar on the first row, the current tab's
 ; window below it, and on the last row the selected link, the location,
-; a message, or a question being typed: a location to open, or text to
-; search for.  Nothing here touches a terminal, so a spec drives it with
-; keys and reads the screen back.
+; a message, or a question being typed: a location to open, text to
+; search for, or a field's text.  Nothing here touches a terminal, so a
+; spec drives it with keys and reads the screen back.
+;
+; A form's fields are selected as links are.  Enter on a text field asks
+; for its text, on a checkbox or radio button turns it on or off, on a
+; select moves to its next option, and on a submit button sends the form:
+; by GET as its action with the fields as the query, by POST through the
+; loader with them as the body.  A field's value lives in the tab's
+; document, whose field inline is rewritten, so going back finds the
+; values as they were left.
 ;
 ; Documents are loaded by the browser's loader, (doc-load LOC) unless
-; one is given: a spec loads from a list instead.
+; one is given, and (LOADER LOC post BODY) for a form sent by POST: a
+; spec loads from a list instead.
 
 (module browse/browser)
 
@@ -28,7 +37,7 @@
 (import x/tui/page)
 (import x/tui/window)
 (import x/tui/tabs)
-(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-blocks doc-title)
+(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-at doc-blocks doc-title doc-query)
 
 ; A browser is a vector: 0 the tabs, 1 each tab's state in the tabs'
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
@@ -37,7 +46,7 @@
 ; on, or nil.  A tab's state is a vector: 0 the location, 1 the
 ; document, 2 the history, newest first, each (LOCATION DOCUMENT TOP
 ; SELECTED).  A question is (WHAT . TEXT): WHAT here or tab for a
-; location to open there, or search.
+; location to open there, search, or field for the selected field's text.
 (def %quot (prim-ref (lit int) (lit /)))
 (def %and (prim-ref (lit int) (lit &)))
 (def %min (fn (_ a b) (if (< a b) a b)))
@@ -83,11 +92,13 @@
            (Window go w line (%body-rows b))))
        (%anchor (Window page w) frag)))))
 
-; LOC's document, or nil with the reason said.
+; LOC's document, asked with MORE (a method and a body, or nothing), as
+; (LOCATION . DOCUMENT), the location where it came from; nil with the
+; reason said.
 (def %load
-  (fn (_ b loc)
+  (fn (_ b loc more)
     (guard (e (do (%say! b (Str8 append (%err-text e) ": " loc)) ()))
-      ((%get b 7) loc))))
+      (doc-at loc (if (null? more) ((%get b 7) loc) ((%get b 7) loc (first more) (List ref 1 more)))))))
 
 (def %show!
   (fn (_ b w loc doc top selected)
@@ -97,27 +108,30 @@
     (Window select w selected (%body-rows b))))
 
 ; LOC opened: WHERE here replaces the current tab's document, keeping
-; the one it had in the tab's history; tab adds a tab for it.  Answers
-; whether it opened.
+; the one it had in the tab's history; tab adds a tab for it.  MORE, a
+; method and a body, sends a form.  Answers whether it opened.
 (def browse-open!
-  (fn (_ b loc where)
-    (def doc (%load b loc))
-    (unless (null? doc)
-      (if (if (eq? where (lit tab)) #t (< (%index b) 0))
-        (do (def w (Window make (doc-title loc doc) (%page doc (%cols b))))
-            (Tabs add (%tabs b) w)
-            (%put! b 1 (List append (%get b 1) (list (Vector of loc doc ()))))
-            (%go-fragment! b w loc))
-        (do (def s (%state b))
-            (def w (%window b))
-            (Vector set! 2 (pair (list (Vector ref 0 s) (Vector ref 1 s) (Window top w) (Window selected w))
-                                 (Vector ref 2 s))
-                    s)
-            (Vector set! 0 loc s)
-            (Vector set! 1 doc s)
-            (%show! b w loc doc 0 ())
-            (%go-fragment! b w loc))))
-    (not (null? doc))))
+  (fn (_ b asked where . more)
+    (def got (%load b asked more))
+    (unless (null? got)
+      (do
+        (def loc (first got))
+        (def doc (rest got))
+        (if (if (eq? where (lit tab)) #t (< (%index b) 0))
+          (do (def w (Window make (doc-title loc doc) (%page doc (%cols b))))
+              (Tabs add (%tabs b) w)
+              (%put! b 1 (List append (%get b 1) (list (Vector of loc doc ()))))
+              (%go-fragment! b w loc))
+          (do (def s (%state b))
+              (def w (%window b))
+              (Vector set! 2 (pair (list (Vector ref 0 s) (Vector ref 1 s) (Window top w) (Window selected w))
+                                   (Vector ref 2 s))
+                      s)
+              (Vector set! 0 loc s)
+              (Vector set! 1 doc s)
+              (%show! b w loc doc 0 ())
+              (%go-fragment! b w loc)))))
+    (not (null? got))))
 
 (def %back!
   (fn (_ b)
@@ -133,25 +147,193 @@
 (def %reload!
   (fn (_ b)
     (def s (%state b))
-    (def doc (%load b (Vector ref 0 s)))
-    (unless (null? doc)
-      (do (Vector set! 1 doc s)
-          ((fn (_ w) (%show! b w (Vector ref 0 s) doc (Window top w) (Window selected w))) (%window b))))))
+    (def got (%load b (Vector ref 0 s) ()))
+    (unless (null? got)
+      (do (Vector set! 0 (first got) s)
+          (Vector set! 1 (rest got) s)
+          ((fn (_ w) (%show! b w (first got) (rest got) (Window top w) (Window selected w))) (%window b))))))
 
-; Where the selected link goes, or nil with none selected.
+; --- fields ------------------------------------------------------------------
+
+; A field inline, (field TYPE NAME VALUE ON OPTIONS FORM) as x/codec/html
+; answers one: its parts, and a copy with one changed.
+(def %f-type (fn (_ f) (List ref 1 f)))
+(def %f-name (fn (_ f) (List ref 2 f)))
+(def %f-value (fn (_ f) (List ref 3 f)))
+(def %f-on (fn (_ f) (List ref 4 f)))
+(def %f-options (fn (_ f) (List ref 5 f)))
+(def %f-form (fn (_ f) (List ref 6 f)))
+(def %f-with-value
+  (fn (_ f v) (list (lit field) (%f-type f) (%f-name f) v (%f-on f) (%f-options f) (%f-form f))))
+(def %f-with-on
+  (fn (_ f on) (list (lit field) (%f-type f) (%f-name f) (%f-value f) on (%f-options f) (%f-form f))))
+(def %f-form-index (fn (_ f) (if (null? (%f-form f)) () (first (%f-form f)))))
+
+; BLOCKS with every field replaced by (F K FIELD), K the field's number
+; among the document's fields in order: the order the page files them in
+; with the links, so a selected entry's field is found by counting.
+(def %map-fields
+  (fn (_ blocks f)
+    (def k (Vector of 0))
+    (def inlines
+      (fn (self xs)
+        (List map
+          (fn (_ x)
+            (match
+              ((str? x) x)
+              ((eq? (first x) (lit field))
+                ((fn (_ n) (Vector set! 0 (+ n 1) k) (f n x)) (Vector ref 0 k)))
+              ((eq? (first x) (lit link)) (list (lit link) (List ref 1 x) (List ref 2 x) (self (List ref 3 x))))
+              ((match ((eq? (first x) (lit emph)) #t) ((eq? (first x) (lit strong)) #t) (#t #f))
+                (list (first x) (self (List ref 1 x))))
+              (#t x)))
+          xs)))
+    ((fn (self bs)
+       (List map
+         (fn (_ b)
+           (match
+             ((eq? (first b) (lit heading)) (list (lit heading) (List ref 1 b) (inlines (List ref 2 b))))
+             ((eq? (first b) (lit paragraph)) (list (lit paragraph) (inlines (List ref 1 b))))
+             ((eq? (first b) (lit block-quote)) (list (lit block-quote) (self (List ref 1 b))))
+             ((eq? (first b) (lit list))
+               (list (lit list) (List ref 1 b) (List ref 2 b) (List ref 3 b)
+                     (List map (fn (_ item) (self item)) (List ref 4 b))))
+             (#t b)))
+         bs))
+     blocks)))
+
+; DOC with BLOCKS in place of its own.
+(def %with-blocks
+  (fn (_ doc blocks)
+    (if (eq? (first doc) (lit html)) (pair (lit html) (pair (first (rest doc)) blocks)) (pair (lit markdown) blocks))))
+
+; The selected entry's number among the page's fields.
+(def %field-ordinal
+  (fn (_ b)
+    (def w (%window b))
+    (List count-if (fn (_ l) (not (str? (first l)))) (List take (Window selected w) (Page links (Window page w))))))
+
+; The current tab's document with its fields mapped through F, shown
+; again where it was, the selection kept.
+(def %edit-fields!
+  (fn (_ b f)
+    (def s (%state b))
+    (def w (%window b))
+    (def doc (%with-blocks (Vector ref 1 s) (%map-fields (doc-blocks (Vector ref 1 s)) f)))
+    (Vector set! 1 doc s)
+    (%show! b w (Vector ref 0 s) doc (Window top w) (Window selected w))))
+
+; Whether Y is a radio button of X's group: the same name in the same form.
+(def %same-group?
+  (fn (_ x y)
+    (match ((not (eq? (%f-type y) (lit radio))) #f)
+           ((null? (%f-name x)) #f)
+           ((null? (%f-name y)) #f)
+           ((not (str=? (%f-name x) (%f-name y))) #f)
+           (#t (eq? (%f-form-index x) (%f-form-index y))))))
+
+; The value of the option after F's, the first after the last.
+(def %next-option
+  (fn (_ f)
+    (def opts (%f-options f))
+    (if (null? opts) (%f-value f)
+      ((fn (self os)
+         (match ((null? os) (first (first opts)))
+                ((str=? (first (first os)) (%f-value f))
+                  (if (null? (rest os)) (first (first opts)) (first (first (rest os)))))
+                (#t (self (rest os)))))
+       opts))))
+
+; The (NAME . VALUE) pairs the form numbered FORM sends from BLOCKS: its
+; named fields in order, a checkbox or radio button only when on, a
+; submit button only the one pressed, field PRESSED.
+(def %form-params
+  (fn (_ blocks form pressed)
+    (def out (Vector of ()))
+    (def add! (fn (_ y) (Vector set! 0 (pair (pair (%f-name y) (%f-value y)) (Vector ref 0 out)) out)))
+    (%map-fields blocks
+      (fn (_ j y)
+        (when (if (null? (%f-name y)) #f (eq? (%f-form-index y) form))
+          ((fn (_ t)
+             (match ((eq? t (lit submit)) (when (= j pressed) (add! y)))
+                    ((match ((eq? t (lit checkbox)) #t) (#t (eq? t (lit radio)))) (when (%f-on y) (add! y)))
+                    (#t (add! y))))
+           (%f-type y)))
+        y))
+    (List reverse (Vector ref 0 out))))
+
+; URL with PARAMS as its query, in place of any it has.
+(def %with-query
+  (fn (_ url params)
+    (def q (Str8 index-of "?" url))
+    (Str8 append (if (null? q) url (Str8 sub 0 q url)) "?" (doc-query params))))
+
+; Where the form of the submit button X, field PRESSED, sends: its
+; action resolved against the document, with the query for GET.
+(def %form-target
+  (fn (_ b x pressed)
+    (def form (%f-form x))
+    (def action (first (doc-fragment (doc-resolve (Vector ref 0 (%state b)) (List ref 1 form)))))
+    (if (eq? (List ref 2 form) (lit post)) action
+      (%with-query action (%form-params (doc-blocks (Vector ref 1 (%state b))) (first form) pressed)))))
+
+(def %submit!
+  (fn (_ b x k where)
+    (def form (%f-form x))
+    (if (null? form) (%say! b "a button in no form")
+      (if (eq? (List ref 2 form) (lit post))
+        (browse-open! b (%form-target b x k) where (lit post)
+                      (doc-query (%form-params (doc-blocks (Vector ref 1 (%state b))) (first form) k)))
+        (browse-open! b (%form-target b x k) where)))))
+
+; Enter on the selected field X.
+(def %act-field!
+  (fn (_ b x where)
+    (def k (%field-ordinal b))
+    (def t (%f-type x))
+    (match
+      ((eq? t (lit checkbox)) (%edit-fields! b (fn (_ j y) (if (= j k) (%f-with-on y (not (%f-on y))) y))))
+      ((eq? t (lit radio))
+        (%edit-fields! b (fn (_ j y) (match ((= j k) (%f-with-on y #t)) ((%same-group? x y) (%f-with-on y #f)) (#t y)))))
+      ((eq? t (lit select)) (%edit-fields! b (fn (_ j y) (if (= j k) (%f-with-value y (%next-option y)) y))))
+      ((eq? t (lit submit)) (%submit! b x k where))
+      (#t (%put! b 5 (pair (lit field) (%f-value x)))))))
+
+; What the status line says of the selected field X: what it is and its
+; name, or for a submit button where its form sends.
+(def %describe
+  (fn (_ b x)
+    (def t (%f-type x))
+    (def named (if (null? (%f-name x)) "" (Str8 append " \"" (%f-name x) "\"")))
+    (match
+      ((eq? t (lit submit))
+        (if (null? (%f-form x)) "a button in no form"
+          (Str8 append (if (eq? (List ref 2 (%f-form x)) (lit post)) "POST " "") (%form-target b x (%field-ordinal b)))))
+      ((eq? t (lit checkbox)) (Str8 append "checkbox" named))
+      ((eq? t (lit radio)) (Str8 append "radio button" named))
+      ((eq? t (lit select)) (Str8 append "select" named))
+      ((eq? t (lit textarea)) (Str8 append "text area" named))
+      ((eq? t (lit password)) (Str8 append "password field" named))
+      (#t (Str8 append "text field" named)))))
+
+; Where the selected link goes, or what the selected field is; nil with
+; none selected.
 (def %target
   (fn (_ b)
     (def l (Window link (%window b)))
-    (if (null? l) () (doc-resolve (Vector ref 0 (%state b)) (first l)))))
+    (match ((null? l) ())
+           ((str? (first l)) (doc-resolve (Vector ref 0 (%state b)) (first l)))
+           (#t (%describe b (first l))))))
 
 (def %follow!
   (fn (_ b where)
     (def l (Window link (%window b)))
     (match
       ((null? l) (%say! b "no link selected"))
+      ((not (str? (first l))) (%act-field! b (first l) where))
       ((if (eq? where (lit here)) (Str8 starts? "#" (first l)) #f)
         (%go-fragment! b (%window b) (first l)))
-      (#t (browse-open! b (%target b) where)))))
+      (#t (browse-open! b (doc-resolve (Vector ref 0 (%state b)) (first l)) where)))))
 
 (def %close!
   (fn (_ b)
@@ -241,6 +423,9 @@
       ((%key? key (list (lit enter)))
         (do (%put! b 5 ())
             (match ((eq? (first q) (lit search)) (%search! b (rest q)))
+                   ((eq? (first q) (lit field))
+                     ((fn (_ k) (%edit-fields! b (fn (_ j y) (if (= j k) (%f-with-value y (rest q)) y))))
+                      (%field-ordinal b)))
                    ((str=? (rest q) "") ())
                    (#t (browse-open! b (rest q) (first q))))))
       ((%key? key (list (lit escape) (lit abort) (lit interrupt))) (%put! b 5 ()))
@@ -347,6 +532,9 @@
       (match ((not (null? q))
                (Str8 append (match ((eq? (first q) (lit tab)) "Open in a new tab: ")
                                    ((eq? (first q) (lit search)) "Search: ")
+                                   ((eq? (first q) (lit field))
+                                     ((fn (_ n) (if (null? n) "Text: " (Str8 append n ": ")))
+                                      (%f-name (first (Window link w)))))
                                    (#t "Open: "))
                             (rest q)))
              ((not (null? (%get b 4))) (%get b 4))
