@@ -114,3 +114,44 @@ time: the tab bar, the window, and the status line.
 ```
 ---
     ("nothing to search for" "last")
+
+## forms
+
+### fields are selected as links are and drawn as lynx draws them; Enter on a text field asks for its text, on a checkbox turns it on, on a select moves to its next option
+
+```browse
+(def b (spec-browse 6 40 spec-forms "form.html" (list 'complete)))
+(def row (fn (_ k) (List ref k (spec-screen b 6 40))))
+(def keys (fn (_ ks) (List for-each (fn (_ k) (browse-key! b k)) ks)))
+(write (list (row 0) (row 1) (row 3) (row 5)
+             (do (keys (list 'enter "d" "u")) (row 5))
+             (do (keys (list 'enter)) (row 1))
+             (do (keys (list 'complete)) (row 5))
+             (do (keys (list 'enter 'complete 'enter 'enter)) (row 1))
+             (do (keys (list 'complete)) (row 5))))
+```
+---
+    (" 1 Ask" "Q: ____________________ [ ] [a] [Go]" "(*) ( ) [Send]" "text field \"q\"                     1-3/3" "q: du" "Q: du__________________ [ ] [a] [Go]" "checkbox \"c\"                       1-3/3" "Q: du__________________ [X] [a] [Go]" "found.md?q=du&c=1&s=a              1-3/3")
+
+### Enter on a button sends the form by GET, the fields as the query; back finds the values kept; Esc leaves a text field as it was
+
+```browse
+(def b (spec-browse 6 40 spec-forms "form.html" (list 'complete 'enter "d" "u" 'enter 'complete 'enter 'complete 'complete 'enter)))
+(def row (fn (_ k) (List ref k (spec-screen b 6 40))))
+(write (list (browse-location b) (row 1)
+             (do (browse-key! b 'left) (list (browse-location b) (row 1)))
+             (do (List for-each (fn (_ k) (browse-key! b k)) (list "p" "p" "p" 'enter "x" 'escape)) (row 1))))
+```
+---
+    ("found.md?q=du&c=1&s=a" "Found" ("form.html" "Q: du__________________ [X] [a] [Go]") "Q: du__________________ [X] [a] [Go]")
+
+### a radio button turns the others of its group off; a form sent by POST goes through the loader with its body
+
+```browse
+(def b (spec-browse 6 40 spec-forms "form.html" (list 'complete 'complete 'complete 'complete 'complete 'complete 'enter)))
+(def row (fn (_ k) (List ref k (spec-screen b 6 40))))
+(write (list (row 3) (do (browse-key! b 'complete) (row 5))
+             (do (browse-key! b 'enter) (list (browse-location b) (row 1) (row 3)))))
+```
+---
+    ("( ) (*) [Send]" "POST in.md                         1-3/3" ("in.md" "Sent" "post r=y&b=1"))

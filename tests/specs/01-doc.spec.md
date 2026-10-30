@@ -53,6 +53,16 @@ heading's fragment names, and what loading a location answers.
 ---
     ('markdown ('text . "plain text\n\twith a tab\n") "Fixtures" "notes.txt" ('markdown ('heading 1 ("tests/fixtures/sub/")) ('list #f () #t ((('paragraph (('link "../" () ("../"))))) (('paragraph (('link "page.md" () ("page.md")))))))) "no such file" "no way to open this")
 
+### a redirected document's location is where it came from, with the fragment asked for; any other passes through
+
+```browse
+(write (list (doc-at "https://h.org/a#top" (pair 'at (pair "https://w.h.org/b" (pair 'text "t"))))
+             (doc-at "https://h.org/a#top" (pair 'at (pair "https://w.h.org/b#end" (pair 'text "t"))))
+             (doc-at "a.md" (pair 'text "t"))))
+```
+---
+    (("https://w.h.org/b#top" 'text . "t") ("https://w.h.org/b#end" 'text . "t") ("a.md" 'text . "t"))
+
 ## dump
 
 ### lynx's: link text led by its number, the references after
