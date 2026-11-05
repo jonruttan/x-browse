@@ -7,9 +7,11 @@
 ; @license MIT No Attribution (MIT-0)
 ;
 ;   x -l browse -- [LOCATION ...]               browse, a tab for each
-;   x -l browse -- -dump [-width N] LOCATION    the document as text
+;   x -l browse -- -d [-w N] LOCATION           the document as text
 ;
-; With no location the browser opens the current directory.  Browsing
+; The options are one declaration to the platform's Opts, which parses
+; them and prints the help.  With no location the browser opens the
+; current directory.  Browsing
 ; takes the terminal: raw, on the alternate screen, the cursor hidden,
 ; given back as it was on the way out.  The size is asked again whenever
 ; no key comes for a quarter of a second, and the tabs laid out again
@@ -23,51 +25,32 @@
 (import x/repl/term)
 (import x/tui/screen)
 (import x/tui/tabs)
+(import x/sys/opts)
 (import browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
   browse-repaint? browse-tabs browse-message)
 (import browse/dump browse-dump)
 
 (def browse-version "0.1.0")
 
-(def %usage
-  (Str8 join "\n"
-    (list "usage: x -l browse -- [LOCATION ...]"
-          "       x -l browse -- -dump [-width N] LOCATION"
-          ""
-          "A location is a path, an http:// or https:// url, or about:help."
-          "Browsing, ? shows the keys."
-          "")))
+; The options and the help text, one declaration: what parse accepts is
+; what usage prints.
+(def browse-options
+  (Opts declare "x -l browse --" "[OPTIONS] [LOCATION ...]"
+    "A terminal browser for Markdown and HTML, a tab a location.\nA location is a path, an http:// or https:// url, or about:help.  Browsing, ? shows the keys."
+    (list (Opts flag "-d" "--dump" "Write the first location as text and exit, as lynx -dump does")
+          (Opts arg "-w" "--width" "N" "Columns for --dump, 80 unless given, 10 at least")
+          (Opts flag "-V" "--version" "Print the version and exit")
+          (Opts flag "-h" "--help" "Print this help and exit"))
+    (pair (lit help) #f)))
 
 (def %say (fn (_ fd text) (Sys fd-write fd text)))
 
 (def %to-int
   (fn (_ s) (guard (e ()) ((prim-ref (lit convert) (lit to)) s (Type named INTEGER) 10))))
 
-; The options in ARGS, as an alist: (dump . #t), (width . N), (help . #t),
-; (version . #t), (locations . LIST), or (error . TEXT).
-(def %options
-  (fn (self args opts locs)
-    (match
-      ((null? args) (pair (pair (lit locations) (List reverse locs)) opts))
-      ((str=? (first args) "-dump") (self (rest args) (pair (pair (lit dump) #t) opts) locs))
-      ((match ((str=? (first args) "-h") #t) ((str=? (first args) "-help") #t) ((str=? (first args) "--help") #t) (#t #f))
-        (self (rest args) (pair (pair (lit help) #t) opts) locs))
-      ((match ((str=? (first args) "-version") #t) ((str=? (first args) "--version") #t) (#t #f))
-        (self (rest args) (pair (pair (lit version) #t) opts) locs))
-      ((str=? (first args) "-width")
-        ((fn (_ n)
-           (if (if (null? n) #t (< n 10)) (list (pair (lit error) "-width takes a number of columns, 10 or more"))
-             (self (List drop 2 args) (pair (pair (lit width) n) opts) locs)))
-         (if (null? (rest args)) () (%to-int (List ref 1 args)))))
-      ((if (Str8 starts? "-" (first args)) (< 1 (Str8 length (first args))) #f)
-        (list (pair (lit error) (Str8 append "no such option: " (first args)))))
-      (#t (self (rest args) opts (pair (first args) locs))))))
-
-(def %opt (fn (_ opts k) ((fn (_ p) (if (null? p) () (rest p))) (Assoc find k opts))))
-
 (def %dump
   (fn (_ locs width)
-    (if (null? locs) (do (%say 2 %usage) 2)
+    (if (null? locs) (do (%say 2 (Opts usage browse-options)) 2)
       (guard (e (do (%say 2 (Str8 append "x-browse: " (%err-text e) ": " (first locs) "\n")) 1))
         (do (%say 1 (browse-dump (first locs) width)) 0)))))
 
@@ -131,7 +114,7 @@
     ; fd 0; it is taken back, as the REPL and x-tmux take it.
     (guard (e ()) (when (Sys isatty 3) (do (Sys dup2 3 0) (Sys close 3))))
     (if (not (if (Term tty? 0) (Sys isatty 1) #f))
-      (do (%say 2 "x-browse: not a terminal: -dump writes a document as text\n") 1)
+      (do (%say 2 "x-browse: not a terminal: --dump writes a document as text\n") 1)
       (do
         (def size (Term window 0))
         (def b (browse-make (rest size) (first size)))
@@ -152,14 +135,17 @@
 ; ARGS, the command line after the launcher's options: the exit status.
 (def browse-main
   (fn (_ args)
-    (def opts (%options args () ()))
+    (def opts (Opts parse browse-options args))
+    (def locs (Opts operands opts))
+    (def width (if (null? (Opts value opts "-w")) 80 (%to-int (Opts value opts "-w"))))
     (match
-      ((not (null? (%opt opts (lit error))))
-        (do (%say 2 (Str8 append "x-browse: " (%opt opts (lit error)) "\n" %usage)) 2))
-      ((%opt opts (lit help)) (do (%say 1 %usage) 0))
-      ((%opt opts (lit version)) (do (%say 1 (Str8 append "x-browse " browse-version "\n")) 0))
-      ((%opt opts (lit dump))
-        (%dump (%opt opts (lit locations)) (if (null? (%opt opts (lit width))) 80 (%opt opts (lit width)))))
-      (#t (%browse (if (null? (%opt opts (lit locations))) (list ".") (%opt opts (lit locations))))))))
+      ((not (null? (Opts unknown opts)))
+        (do (%say 2 (Str8 append "x-browse: no such option: " (Opts unknown opts) "\n" (Opts usage browse-options))) 2))
+      ((Opts on? opts "-h") (do (%say 1 (Opts usage browse-options)) 0))
+      ((Opts on? opts "-V") (do (%say 1 (Str8 append "x-browse " browse-version "\n")) 0))
+      ((if (null? width) #t (< width 10))
+        (do (%say 2 "x-browse: --width takes a number of columns, 10 or more\n") 2))
+      ((Opts on? opts "-d") (%dump locs width))
+      (#t (%browse (if (null? locs) (list ".") locs))))))
 
-(provide browse/cli browse-main browse-version)
+(provide browse/cli browse-main browse-options browse-version)

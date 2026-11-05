@@ -6,7 +6,7 @@ code, quotes, lists, links and forms drawn with the terminal's
 attributes, in tabs.
 
     x -l browse -- [LOCATION ...]
-    x -l browse -- -dump [-width N] LOCATION
+    x -l browse -- -d [-w N] LOCATION
 
 A location is a path, an `http://` or `https://` url, or `about:help`.
 Each location given opens in a tab of its own; with none, the browser
@@ -68,10 +68,10 @@ sends them as the body, `application/x-www-form-urlencoded`.  What is
 typed into a form stays with the document in its tab, so going back
 finds it as it was left.
 
-## -dump
+## --dump
 
-`-dump` writes the document as text on standard output, laid out `-width`
-columns wide (80 when not given), as lynx's `-dump` does: each link's text
+`-d`, `--dump`, writes the document as text on standard output, laid out
+`-w N`, `--width N`, columns wide (80 when not given), as lynx's `-dump` does: each link's text
 led by its number in brackets, a form's fields drawn as the browser draws
 them, and after the document the list of where the links go.
 
