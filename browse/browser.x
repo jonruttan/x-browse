@@ -47,8 +47,7 @@
 ; document, 2 the history, newest first, each (LOCATION DOCUMENT TOP
 ; SELECTED).  A question is (WHAT . TEXT): WHAT here or tab for a
 ; location to open there, search, or field for the selected field's text.
-(def %quot (prim-ref (lit int) (lit /)))
-(def %and (prim-ref (lit int) (lit &)))
+(import x/core/doors int/ int&)
 (def %min (fn (_ a b) (if (< a b) a b)))
 
 (def %get (fn (_ b k) (Vector ref k b)))
@@ -375,7 +374,7 @@
   (fn (_ text)
     ((fn (self i)
        (if (< i 1) ""
-         (if (= (%and (Char ->int (Str8 ref (- i 1) text)) 192) 128) (self (- i 1)) (Str8 sub 0 (- i 1) text))))
+         (if (= (int& (Char ->int (Str8 ref (- i 1) text)) 192) 128) (self (- i 1)) (Str8 sub 0 (- i 1) text))))
      (Str8 length text))))
 
 ; --- searching ---------------------------------------------------------------
@@ -449,8 +448,8 @@
           ((%key? key (list "k" (lit up))) (%scroll! b -1))
           ((%key? key (list " " "f" (lit page-down))) (%scroll! b n))
           ((%key? key (list "b" (lit page-up))) (%scroll! b (- 0 n)))
-          ((%key? key (list "d")) (%scroll! b (%quot (+ n 1) 2)))
-          ((%key? key (list "u")) (%scroll! b (- 0 (%quot (+ n 1) 2))))
+          ((%key? key (list "d")) (%scroll! b (int/ (+ n 1) 2)))
+          ((%key? key (list "u")) (%scroll! b (- 0 (int/ (+ n 1) 2))))
           ((%key? key (list "g" (lit home))) (Window go (%window b) 0 n))
           ((%key? key (list "G" (lit end))) (Window go (%window b) (Page count (Window page (%window b))) n))
           ((%key? key (list (lit complete)))
@@ -506,7 +505,7 @@
     (if (< (text-width s) (+ w 1)) s
       ((fn (self i)
          (match ((= i (Str8 length s)) "")
-                ((= (%and (Char ->int (Str8 ref i s)) 192) 128) (self (+ i 1)))
+                ((= (int& (Char ->int (Str8 ref i s)) 192) 128) (self (+ i 1)))
                 ((< (text-width (Str8 sub i (- (Str8 length s) i) s)) w)
                   (Str8 append "\xe2\x80\xa6" (Str8 sub i (- (Str8 length s) i) s)))
                 (#t (self (+ i 1)))))
