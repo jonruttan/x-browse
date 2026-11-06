@@ -6,8 +6,8 @@
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
 ;
-; A location is a path on this machine, an http or https url, or
-; about:help.  A link's destination is resolved against the location of
+; A location is a path on this machine, an http or https url, a data:
+; url in base64, or about:help.  A link's destination is resolved against the location of
 ; the document it is in, as a browser resolves a relative url: a path
 ; against the document's directory, an absolute path against the
 ; host.  `#FRAGMENT` names a heading of the document, by the slug
@@ -39,6 +39,7 @@
 (import x/codec/markdown)
 (import x/codec/html)
 (import x/codec/png)
+(import x/codec/base64)
 (import browse/help browse-help)
 
 ; --- locations ---------------------------------------------------------------
@@ -169,6 +170,30 @@
 ; BYTES are N long: a PNG holds NUL bytes, which end a string's own length.
 (def %image (fn (_ bytes n) (pair (lit image) (Png decode bytes 0 n))))
 
+; The type a data: url names, text/plain when it names none.
+(def %data-type
+  (fn (_ path)
+    ((fn (_ t) (if (str=? t "") "text/plain" t))
+     (Str8 downcase (first (%cut ";" (first (%cut "," (Str8 sub 5 (- (Str8 length path) 5) path)))))))))
+
+; The document a data: url holds, data:[TYPE][;PARAM...];base64,DATA.
+(def %data
+  (fn (_ path)
+    (def parts (%cut "," (Str8 sub 5 (- (Str8 length path) 5) path)))
+    (unless (if (null? (rest parts)) #f (Str8 ends? ";base64" (Str8 downcase (first parts))))
+      (Err raise (lit value) "a data: url not in base64" path))
+    (def region
+      (guard (e (Err raise (lit value) "a data: url whose base64 does not decode" path))
+        (Base64 decode-region (rest parts))))
+    (def bytes (first region))
+    (def n (List ref 2 region))
+    (def type (%data-type path))
+    (match ((%png? bytes) (%image bytes n))
+           ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) path))
+           ((str=? type "text/markdown") (%markdown (Str8 sub 0 n bytes)))
+           ((str=? type "text/html") (%html (Str8 sub 0 n bytes)))
+           (#t (pair (lit text) (Str8 sub 0 n bytes))))))
+
 ; Markdown text listing the directory DIR, its entries linked, a
 ; directory's name ending /.
 (def %listing
@@ -233,6 +258,7 @@
       ((doc-web? path)
         (%fetch path (if (null? more) (lit get) (first more)) (if (null? more) () (List ref 1 more))))
       ((Str8 starts? "file://" path) (doc-load (Str8 sub 7 (- (Str8 length loc) 7) loc)))
+      ((Str8 starts? "data:" path) (%data path))
       ((doc-scheme? path) (Err raise (lit value) "no way to open this" path))
       (#t
         ((fn (_ type)
@@ -288,6 +314,7 @@
     (def h (if (null? t) (List find (fn (_ b) (eq? (first b) (lit heading))) (doc-blocks doc)) ()))
     (match
       ((not (null? t)) t)
+      ((if (null? h) (Str8 starts? "data:" loc) #f) (Str8 append "data:" (%data-type loc)))
       ((null? h)
         ((fn (_ p)
            ((fn (_ q) (if (str=? q "") p q))

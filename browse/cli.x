@@ -40,7 +40,7 @@
 ; what usage prints.
 (def browse-options
   (Opts declare "x -l browse --" "[OPTIONS] [LOCATION ...]"
-    "A terminal browser for Markdown and HTML, a tab a location.\nA location is a path, an http:// or https:// url, or about:help.  Browsing, ? shows the keys."
+    "A terminal browser for Markdown and HTML, a tab a location.\nA location is a path, an http:// or https:// url, a data: url in base64, or about:help.  Browsing, ? shows the keys."
     (list (Opts flag "-d" "--dump" "Write the first location as text and exit, as lynx -dump does")
           (Opts arg "-w" "--width" "N" "Columns for --dump, 80 unless given, 10 at least")
           (Opts flag "-V" "--version" "Print the version and exit")
