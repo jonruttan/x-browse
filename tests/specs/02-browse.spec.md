@@ -155,3 +155,18 @@ time: the tab bar, the window, and the status line.
 ```
 ---
     ("( ) (*) [Send]" "POST in.md                         1-3/3" ("in.md" "Sent" "post r=y&b=1"))
+
+## images
+
+### Enter on an image's link shows it: the window empty, the picture fitted to it; back returns and the picture goes
+
+```browse
+(def site (list (pair "pics.md" "# Pics\n\n![a dot](dot.png)")
+                (pair "dot.png" (doc-load "tests/fixtures/dot.png"))))
+(def b (spec-browse 6 30 site "pics.md" (list 'complete 'enter)))
+(write (list (spec-screen b 6 30) (browse-picture b 'rgb) (browse-picture b 'indexed)
+             (eq? (browse-picture b 'rgb) (browse-picture b 'rgb))
+             (do (browse-key! b 'left) (list (browse-location b) (browse-picture b 'rgb)))))
+```
+---
+    ((" 1 dot.png" "" "" "" "" "dot.png                  0-0/0") ("\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m") ("\x1b[0;38;5;196m▀\x1b[0;38;5;46m▀\x1b[0m") #t ("pics.md" ()))

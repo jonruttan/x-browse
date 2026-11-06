@@ -15,7 +15,10 @@
 ; takes the terminal: raw, on the alternate screen, the cursor hidden,
 ; given back as it was on the way out.  The size is asked again whenever
 ; no key comes for a quarter of a second, and the tabs laid out again
-; when it has changed.
+; when it has changed.  An image is written over the window after the
+; screen, in 24-bit colour when COLORTERM says the terminal has it
+; (truecolor or 24bit), else in the 256-colour palette; the screen is
+; drawn whole when the image shown changes, so none is left behind.
 
 (module browse/cli)
 
@@ -27,7 +30,7 @@
 (import x/tui/tabs)
 (import x/sys/opts)
 (import browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
-  browse-repaint? browse-tabs browse-message)
+  browse-repaint? browse-tabs browse-message browse-picture)
 (import browse/dump browse-dump)
 
 (def browse-version "0.1.0")
@@ -75,38 +78,54 @@
               ((fn (_ b) (Vector set! 0 (rest (Vector ref 0 box)) box) b) (first (Vector ref 0 box)))))
         (not (null? (Vector ref 0 box)))))))
 
+(def %esc (fn (_ text) (Str8 append "\x1b" text)))
+
+; The colours the terminal shows: rgb when COLORTERM says 24-bit.
+(def %colours
+  (fn (_)
+    ((fn (_ c)
+       (if (if (str? c) (if (str=? c "truecolor") #t (str=? c "24bit")) #f) (lit rgb) (lit indexed)))
+     (guard (e ()) (Sys getenv "COLORTERM")))))
+
+; The screen drawn, then the current image over the window, a line a row
+; from the second.  SHOWN holds the image last written, to tell a change.
 (def %show!
-  (fn (_ b screen)
-    (when (browse-repaint? b) (Screen repaint screen))
+  (fn (_ b screen shown colours)
+    (def picture (browse-picture b colours))
+    (when (if (browse-repaint? b) #t (not (eq? picture (Vector ref 0 shown)))) (Screen repaint screen))
+    (Vector set! 0 picture shown)
     (browse-draw! b screen)
-    (Term emit 1 (Screen render screen))))
+    (Term emit 1 (Screen render screen))
+    (unless (null? picture)
+      (Term emit 1
+        (Str8 join ""
+          (List map (fn (_ k) (Str8 append (%esc "[") (%number->str (+ k 2)) ";1H" (List ref k picture)))
+            (List range 0 (List length picture))))))))
 
 ; The next key, the screen kept the terminal's size while it waits.
 (def %key
-  (fn (self b screen reader)
+  (fn (self b screen reader shown colours)
     (if (reader #t) (Term key reader)
       (if (null? (Sys poll (list (pair 0 (list (lit in)))) 250))
         (do ((fn (_ size)
                (unless (if (= (first size) (Screen cols screen)) (= (rest size) (Screen rows screen)) #f)
                  (do (Screen resize screen (rest size) (first size))
                      (browse-resize! b (rest size) (first size))
-                     (%show! b screen))))
+                     (%show! b screen shown colours))))
              (Term window 0))
-            (self b screen reader))
+            (self b screen reader shown colours))
         (Term key reader)))))
 
 (def %loop
-  (fn (self b screen reader)
-    (%show! b screen)
+  (fn (self b screen reader shown colours)
+    (%show! b screen shown colours)
     (unless (browse-quit? b)
       ((fn (_ key)
          (unless (null? key)
            (do (browse-key! b key)
                (Heap collect)
-               (self b screen reader))))
-       (%key b screen reader)))))
-
-(def %esc (fn (_ text) (Str8 append "\x1b" text)))
+               (self b screen reader shown colours))))
+       (%key b screen reader shown colours)))))
 
 (def %browse
   (fn (_ locs)
@@ -126,7 +145,7 @@
             (def screen (Screen make (rest size) (first size)))
             (def token (Term raw! 0))
             (Term emit 1 (Str8 append (%esc "[?1049h") (%esc "[?25l")))
-            (def failed (guard (e e) (do (%loop b screen (%reader)) ())))
+            (def failed (guard (e e) (do (%loop b screen (%reader) (Vector of ()) (%colours)) ())))
             (Term emit 1 (Str8 append (%esc "[0m") (%esc "[?25h") (%esc "[?1049l")))
             (Term restore! 0 token)
             (if (null? failed) 0

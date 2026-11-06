@@ -15,8 +15,8 @@
 (import x/tui/screen)
 
 ; A loader over SITE, ((LOCATION . TEXT) ...), a location ending .html
-; HTML and any other Markdown; a location's query is left off to find
-; it.  A form sent by POST, (LOADER LOC post BODY), is answered with a
+; HTML and any other Markdown, or ((LOCATION . DOCUMENT) ...) for a
+; document loaded already; a location's query is left off to find it.  A form sent by POST, (LOADER LOC post BODY), is answered with a
 ; page saying what was sent.  A location not there is no such file.
 (def spec-site
   (fn (_ site)
@@ -27,6 +27,7 @@
       (def p (Assoc find name site))
       (match
         ((null? p) (Err raise (lit io) "no such file" loc))
+        ((not (str? (rest p))) (rest p))
         ((not (null? more))
           (pair (lit markdown) (Markdown parse (Str8 append "# Sent\n\npost " (List ref 1 more)))))
         ((Str8 ends? ".html" name) (pair (lit html) (pair (Html title (rest p)) (Html parse (rest p)))))

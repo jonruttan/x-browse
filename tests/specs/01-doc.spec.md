@@ -63,7 +63,25 @@ heading's fragment names, and what loading a location answers.
 ---
     (("https://w.h.org/b#top" 'text . "t") ("https://w.h.org/b#end" 'text . "t") ("a.md" 'text . "t"))
 
+### a PNG file is an image, its size and RGBA pixels; its title is its name
+
+```browse
+(def d (doc-load "tests/fixtures/dot.png"))
+(write (list (first d) (List ref 1 d) (List ref 2 d) (Bytes hex (list (List ref 3 d) 0 8))
+             (doc-title "tests/fixtures/dot.png" d) (doc-blocks d)))
+```
+---
+    ('image 2 1 "ff0000ff00ff00ff" "dot.png" ())
+
 ## dump
+
+### an image: its picture in half blocks and 24-bit colour
+
+```browse
+(write (browse-dump "tests/fixtures/dot.png" 40))
+```
+---
+    "\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m\n"
 
 ### lynx's: link text led by its number, the references after
 

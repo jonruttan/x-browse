@@ -3,7 +3,7 @@
 A terminal browser on x-lang, in the vein of lynx, links and w3m, as a
 lang bundle.  It browses Markdown and HTML: headings, bold, italic,
 code, quotes, lists, links and forms drawn with the terminal's
-attributes, in tabs.
+attributes, in tabs, and PNG images in half-block characters.
 
     x -l browse -- [LOCATION ...]
     x -l browse -- -d [-w N] LOCATION
@@ -73,12 +73,24 @@ finds it as it was left.
 `-d`, `--dump`, writes the document as text on standard output, laid out
 `-w N`, `--width N`, columns wide (80 when not given), as lynx's `-dump` does: each link's text
 led by its number in brackets, a form's fields drawn as the browser draws
-them, and after the document the list of where the links go.
+them, and after the document the list of where the links go.  A PNG
+image is written as its picture in half blocks and 24-bit colour, no
+wider than the columns.
+
+## Images
+
+An image in a page is its alternative text in brackets, a link to the
+image.  Enter on it shows the image fitted to the window, two pixels a
+character cell in half blocks; the back keys return.  A location whose
+bytes are a PNG opens as an image, whatever its name or type.  Colours
+are 24-bit when `COLORTERM` is `truecolor` or `24bit`, else the nearest
+of the 256-colour palette.
 
 ## Requirements
 
-x-lang v0.44.0: `x/codec/markdown`, `x/codec/html` with forms, and `x/tui`
-with fields, and `Term key` naming Page Up and Page Down.
+x-lang v0.47.0: `x/codec/markdown`, `x/codec/html` with forms, `x/codec/png`,
+and `x/tui` with fields and pictures, and `Term key` naming Page Up and
+Page Down.
 
 ## Tests
 
@@ -87,4 +99,5 @@ with fields, and `Term key` naming Page Up and Page Down.
 
 ## Not yet
 
-Images other than their text, and files sent from a form.
+Images other than PNG, images drawn inline in the page, and files sent
+from a form.

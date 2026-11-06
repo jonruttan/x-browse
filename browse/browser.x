@@ -23,6 +23,13 @@
 ; document, whose field inline is rewritten, so going back finds the
 ; values as they were left.
 ;
+; An image is a document as a page is, kept in the tab's history, its
+; page empty: the screen's cells hold a style a cell, not 24-bit colour,
+; so (browse-picture B COLOURS) answers the image as lines of text and
+; escapes, fitted to the window, for the terminal to be given after the
+; screen.  An image linked from a page is opened by Enter on its link,
+; and the back keys return from it.
+;
 ; Documents are loaded by the browser's loader, (doc-load LOC) unless
 ; one is given, and (LOADER LOC post BODY) for a form sent by POST: a
 ; spec loads from a list instead.
@@ -37,13 +44,15 @@
 (import x/tui/page)
 (import x/tui/window)
 (import x/tui/tabs)
+(import x/tui/picture)
 (import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-at doc-blocks doc-title doc-query)
 
 ; A browser is a vector: 0 the tabs, 1 each tab's state in the tabs'
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
 ; asked, 6 whether to quit, 7 the loader, 8 whether the screen is to be
 ; drawn whole, 9 the text last searched for, 10 the line it was found
-; on, or nil.  A tab's state is a vector: 0 the location, 1 the
+; on, or nil, 11 the picture last drawn, ((DOC COLS ROWS COLOURS) .
+; LINES), or nil.  A tab's state is a vector: 0 the location, 1 the
 ; document, 2 the history, newest first, each (LOCATION DOCUMENT TOP
 ; SELECTED).  A question is (WHAT . TEXT): WHAT here or tab for a
 ; location to open there, search, or field for the selected field's text.
@@ -64,7 +73,9 @@
 
 (def %page
   (fn (_ doc width)
-    (if (eq? (first doc) (lit text)) (Page text (rest doc) width) (Page markdown (doc-blocks doc) width))))
+    (match ((eq? (first doc) (lit text)) (Page text (rest doc) width))
+           ((eq? (first doc) (lit image)) (Page text "" width))
+           (#t (Page markdown (doc-blocks doc) width)))))
 
 (def %err-text
   (fn (_ e)
@@ -356,7 +367,7 @@
 
 (def browse-make
   (fn (_ rows cols . loader)
-    (def b (Vector make 11 ()))
+    (def b (Vector make 12 ()))
     (%put! b 0 (Tabs make))
     (%put! b 2 rows)
     (%put! b 3 cols)
@@ -560,5 +571,26 @@
     (%draw-status! b screen)
     screen))
 
+; The current tab's image as lines of text, fitted to the window, in
+; COLOURS (rgb or indexed, as Picture lines takes them), each to be
+; written from the window's first row down; nil when it shows no image.
+; The same image at the same size answers the same list.
+(def browse-picture
+  (fn (_ b colours)
+    (def s (%state b))
+    (def doc (if (null? s) () (Vector ref 1 s)))
+    (if (if (null? doc) #t (not (eq? (first doc) (lit image)))) ()
+      ((fn (_ key cached)
+         (if (if (null? cached) #f
+               ((fn (_ k) (match ((not (eq? (first k) doc)) #f)
+                                 ((not (= (List ref 1 k) (%cols b))) #f)
+                                 ((not (= (List ref 2 k) (%body-rows b))) #f)
+                                 (#t (eq? (List ref 3 k) colours))))
+                (first cached)))
+           (rest cached)
+           ((fn (_ lines) (%put! b 11 (pair key lines)) lines)
+            (Picture lines (rest doc) (%cols b) (%body-rows b) colours))))
+       (list doc (%cols b) (%body-rows b) colours) (%get b 11)))))
+
 (provide browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
-  browse-repaint? browse-tabs browse-location browse-message)
+  browse-repaint? browse-tabs browse-location browse-message browse-picture)
