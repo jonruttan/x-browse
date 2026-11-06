@@ -8,7 +8,8 @@ attributes, in tabs, and PNG images in half-block characters.
     x -l browse -- [LOCATION ...]
     x -l browse -- -d [-w N] LOCATION
 
-A location is a path, an `http://` or `https://` url, or `about:help`.
+A location is a path, an `http://` or `https://` url, a `data:` url in
+base64, or `about:help`.
 Each location given opens in a tab of its own; with none, the browser
 opens the current directory.  A file ending `.md`, `.markdown` or
 `.mdown`, or a response of type `text/markdown`, is read as Markdown; one
@@ -104,5 +105,5 @@ Page Down.
 
 ## Not yet
 
-Images other than PNG, images given as data: urls, and files sent from
+Images other than PNG, `data:` urls not in base64, and files sent from
 a form.

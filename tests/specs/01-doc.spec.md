@@ -73,6 +73,22 @@ heading's fragment names, and what loading a location answers.
 ---
     ('image 2 1 "ff0000ff00ff00ff" "dot.png" ())
 
+### a data: url in base64: a PNG an image, a page by its type, text without one; its title is data: and the type; one not in base64, or of bad base64, is refused
+
+```browse
+(def png "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAIAAAB7QOjdAAAAD0lEQVQI12P4z8DA8J8BAAf/Af8Jop8XAAAAAElFTkSuQmCC")
+(def d (doc-load png))
+(write (list (first d) (List ref 1 d) (List ref 2 d) (Bytes hex (list (List ref 3 d) 0 8)) (doc-title png d)
+             (doc-load "data:text/markdown;charset=utf-8;base64,IyBIaQoKVGhlcmUu")
+             (doc-load "data:;base64,IyBIaQoKVGhlcmUu")
+             (doc-title "data:;base64,IyBIaQoKVGhlcmUu" (doc-load "data:;base64,IyBIaQoKVGhlcmUu"))
+             (guard (e (e msg)) (doc-load "data:text/plain,hi%20there"))
+             (guard (e (e msg)) (doc-load "data:image/gif;base64,R0lGODlh"))
+             (guard (e (e msg)) (doc-load "data:;base64,!!!!"))))
+```
+---
+    ('image 2 1 "ff0000ff00ff00ff" "data:image/png" ('markdown ('heading 1 ("Hi")) ('paragraph ("There."))) ('text . "# Hi\n\nThere.") "data:text/plain" "a data: url not in base64" "an image this browser cannot show: image/gif" "a data: url whose base64 does not decode")
+
 ## dump
 
 ### an image: its picture in half blocks and 24-bit colour
