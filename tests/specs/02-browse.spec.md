@@ -164,9 +164,22 @@ time: the tab bar, the window, and the status line.
 (def site (list (pair "pics.md" "# Pics\n\n![a dot](dot.png)")
                 (pair "dot.png" (doc-load "tests/fixtures/dot.png"))))
 (def b (spec-browse 6 30 site "pics.md" (list 'complete 'enter)))
-(write (list (spec-screen b 6 30) (browse-picture b 'rgb) (browse-picture b 'indexed)
-             (eq? (browse-picture b 'rgb) (browse-picture b 'rgb))
-             (do (browse-key! b 'left) (list (browse-location b) (browse-picture b 'rgb)))))
+(write (list (spec-screen b 6 30) (browse-pictures b 'rgb) (browse-pictures b 'indexed)
+             (same? (rest (first (browse-pictures b 'rgb))) (rest (first (browse-pictures b 'rgb))))
+             (do (browse-key! b 'left) (list (browse-location b) (browse-pictures b 'rgb)))))
 ```
 ---
-    ((" 1 dot.png" "" "" "" "" "dot.png                  0-0/0") ("\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m") ("\x1b[0;38;5;196m▀\x1b[0;38;5;46m▀\x1b[0m") #t ("pics.md" ()))
+    ((" 1 dot.png" "" "" "" "" "dot.png                  0-0/0") ((1 . "\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m")) ((1 . "\x1b[0;38;5;196m▀\x1b[0;38;5;46m▀\x1b[0m")) #t ("pics.md" ()))
+
+### i shows a page's images inline: empty lines below each one's brackets, its picture's rows in the window; one that does not load stays a link; i again puts them back
+
+```browse
+(def site (list (pair "pics.md" "# Pics\n\nA dot: ![a dot](dot.png) here.\n\nNone: ![gone](none.png)\n\nend")
+                (pair "dot.png" (doc-load "tests/fixtures/dot.png"))))
+(def b (spec-browse 9 30 site "pics.md" (list "i")))
+(write (list (spec-screen b 9 30) (browse-message b) (browse-pictures b 'rgb)
+             (do (browse-key! b "j") (browse-pictures b 'indexed))
+             (do (browse-key! b "i") (list (browse-message b) (browse-pictures b 'rgb) (List ref 3 (spec-screen b 9 30))))))
+```
+---
+    ((" 1 Pics" "Pics" "" "A dot: [a dot]" "" "here." "" "None: [gone]" "images inline            1-7/9") "images inline" ((4 . "\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m")) ((3 . "\x1b[0;38;5;196m▀\x1b[0;38;5;46m▀\x1b[0m")) ("images as links" () "A dot: [a dot] here."))
