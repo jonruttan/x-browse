@@ -14,7 +14,11 @@
 ; GitHub gives it.
 ;
 ; A document is (KIND . CONTENT): markdown with its blocks, html with its
-; title (or nil) and then its blocks, or text with its string.  A path
+; title (or nil) and then its blocks, image with its width, height and
+; RGBA pixels as (Png decode) answers them, or text with its string.
+; Bytes that start with PNG's signature are an image, whatever the
+; name or type; a response of any other image type is one this browser
+; cannot show.  A path
 ; ending .md, .markdown or .mdown, or a response whose type is
 ; text/markdown, is Markdown; one ending .html or .htm, or a response
 ; whose type is text/html, is HTML; a directory is a Markdown list of its
@@ -34,6 +38,7 @@
 (import x/net/http)
 (import x/codec/markdown)
 (import x/codec/html)
+(import x/codec/png)
 (import browse/help browse-help)
 
 ; --- locations ---------------------------------------------------------------
@@ -160,6 +165,10 @@
 
 (def %html (fn (_ text) (pair (lit html) (pair (Html title text) (Html parse text)))))
 
+(def %png? (fn (_ bytes) (Str8 starts? "\x89PNG\r\n\x1a\n" bytes)))
+; BYTES are N long: a PNG holds NUL bytes, which end a string's own length.
+(def %image (fn (_ bytes n) (pair (lit image) (Png decode bytes 0 n))))
+
 ; Markdown text listing the directory DIR, its entries linked, a
 ; directory's name ending /.
 (def %listing
@@ -189,11 +198,14 @@
     (def status (rest (Assoc find (lit status) r)))
     (unless (if (< 199 status) (< status 300) #f)
       (Err raise (lit io) (Str8 append "HTTP " (%number->str status)) url))
-    (def text (bytes->str (rest (Assoc find (lit body) r))))
+    (def body (rest (Assoc find (lit body) r)))
+    (def text (bytes->str body))
     (def type (%header (rest (Assoc find (lit headers) r)) "content-type"))
     (def from ((fn (_ p) (if (null? p) (first (doc-fragment url)) (rest p))) (Assoc find (lit url) r)))
     (def doc
-      (match ((Str8 starts? "text/markdown" type) (%markdown text))
+      (match ((%png? text) (%image text (List length body)))
+             ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) url))
+             ((Str8 starts? "text/markdown" type) (%markdown text))
              ((Str8 starts? "text/html" type) (%html text))
              ((%markdown-name? from) (%markdown text))
              ((%html-name? from) (%html text))
@@ -227,7 +239,8 @@
            (match ((eq? type (lit dir)) (%markdown (%listing path)))
                   ((eq? type (lit file))
                     ((fn (_ text)
-                       (match ((%markdown-name? path) (%markdown text))
+                       (match ((%png? text) (%image text (Assoc get (lit size) (File stat path))))
+                              ((%markdown-name? path) (%markdown text))
                               ((%html-name? path) (%html text))
                               (#t (pair (lit text) text))))
                      (File read-all path)))

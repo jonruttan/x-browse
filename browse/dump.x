@@ -14,6 +14,7 @@
 
 (import x/type/vector)
 (import x/tui/page)
+(import x/tui/picture)
 (import browse/doc doc-resolve doc-load doc-at doc-blocks)
 
 ; INLINES with each link and image led by "[N]", N counted in BOX.
@@ -50,7 +51,9 @@
   (fn (_ page)
     (List map (fn (_ i) (Str8 trim-right (Page line-text page i))) (List range 0 (Page count page)))))
 
-; The document at LOC as -dump writes it, WIDTH wide.  A form's fields are
+; The document at LOC as -dump writes it, WIDTH wide.  An image is its
+; picture in half blocks and 24-bit colour, WIDTH columns at most, its
+; shape kept.  A form's fields are
 ; drawn as the page draws them, unnumbered: the page numbers them with
 ; the links, the references list only the links.
 (def browse-dump
@@ -58,20 +61,23 @@
     (def got (doc-at at (doc-load at)))
     (def loc (first got))
     (def doc (rest got))
-    (if (not (eq? (first doc) (lit text)))
-      ((fn (_ page)
-         (def links (List filter (fn (_ l) (str? (first l))) (Page links page)))
-         (Str8 append
-           (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines page)))
-           (if (null? links) ""
-             (Str8 append "\nReferences\n\n"
-               (Str8 join ""
-                 (List map
-                   (fn (_ k)
-                     (Str8 append (Str8 pad-left 5 #\space (Str8 append (%number->str (+ k 1)) ".")) " "
-                                  (doc-resolve loc (first (List ref k links))) "\n"))
-                   (List range 0 (List length links))))))))
-       (Page markdown (%mark-blocks (doc-blocks doc) (Vector of 0)) width))
-      (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width)))))))
+    (match
+      ((eq? (first doc) (lit image))
+        (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (Picture lines (rest doc) width (List ref 2 doc) (lit rgb)))))
+      ((not (eq? (first doc) (lit text)))
+        ((fn (_ page)
+           (def links (List filter (fn (_ l) (str? (first l))) (Page links page)))
+           (Str8 append
+             (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines page)))
+             (if (null? links) ""
+               (Str8 append "\nReferences\n\n"
+                 (Str8 join ""
+                   (List map
+                     (fn (_ k)
+                       (Str8 append (Str8 pad-left 5 #\space (Str8 append (%number->str (+ k 1)) ".")) " "
+                                    (doc-resolve loc (first (List ref k links))) "\n"))
+                     (List range 0 (List length links))))))))
+         (Page markdown (%mark-blocks (doc-blocks doc) (Vector of 0)) width)))
+      (#t (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width))))))))
 
 (provide browse/dump browse-dump)
