@@ -15,10 +15,11 @@
 ; takes the terminal: raw, on the alternate screen, the cursor hidden,
 ; given back as it was on the way out.  The size is asked again whenever
 ; no key comes for a quarter of a second, and the tabs laid out again
-; when it has changed.  An image is written over the window after the
-; screen, in 24-bit colour when COLORTERM says the terminal has it
-; (truecolor or 24bit), else in the 256-colour palette; the screen is
-; drawn whole when the image shown changes, so none is left behind.
+; when it has changed.  Pictures, an image's or a page's images inline,
+; are written over the window after the screen, in 24-bit colour when
+; COLORTERM says the terminal has it (truecolor or 24bit), else in the
+; 256-colour palette; the screen is drawn whole when the pictures shown
+; change or move, so none is left behind.
 
 (module browse/cli)
 
@@ -30,7 +31,7 @@
 (import x/tui/tabs)
 (import x/sys/opts)
 (import browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
-  browse-repaint? browse-tabs browse-message browse-picture)
+  browse-repaint? browse-tabs browse-message browse-pictures)
 (import browse/dump browse-dump)
 
 (def browse-version "0.1.0")
@@ -87,20 +88,21 @@
        (if (if (str? c) (if (str=? c "truecolor") #t (str=? c "24bit")) #f) (lit rgb) (lit indexed)))
      (guard (e ()) (Sys getenv "COLORTERM")))))
 
-; The screen drawn, then the current image over the window, a line a row
-; from the second.  SHOWN holds the image last written, to tell a change.
+; The screen drawn, then the pictures in the window over it, each line
+; on its row.  SHOWN holds the rows last written, to tell a change: the
+; screen's own cells under a picture are blank, so a picture moved or
+; gone is cleared by drawing the screen whole.
 (def %show!
   (fn (_ b screen shown colours)
-    (def picture (browse-picture b colours))
-    (when (if (browse-repaint? b) #t (not (eq? picture (Vector ref 0 shown)))) (Screen repaint screen))
-    (Vector set! 0 picture shown)
+    (def rows (browse-pictures b colours))
+    (when (if (browse-repaint? b) #t (not (equal? rows (Vector ref 0 shown)))) (Screen repaint screen))
+    (Vector set! 0 rows shown)
     (browse-draw! b screen)
     (Term emit 1 (Screen render screen))
-    (unless (null? picture)
+    (unless (null? rows)
       (Term emit 1
         (Str8 join ""
-          (List map (fn (_ k) (Str8 append (%esc "[") (%number->str (+ k 2)) ";1H" (List ref k picture)))
-            (List range 0 (List length picture))))))))
+          (List map (fn (_ r) (Str8 append (%esc "[") (%number->str (+ (first r) 1)) ";1H" (rest r))) rows))))))
 
 ; The next key, the screen kept the terminal's size while it waits.
 (def %key

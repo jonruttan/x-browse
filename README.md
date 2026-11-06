@@ -81,7 +81,12 @@ wider than the columns.
 
 An image in a page is its alternative text in brackets, a link to the
 image.  Enter on it shows the image fitted to the window, two pixels a
-character cell in half blocks; the back keys return.  A location whose
+character cell in half blocks; the back keys return.  `i` shows a page's
+images inline, each below its brackets, fitted to the page's width and a
+row short of the window, and `i` again puts them back to links; it holds
+for every tab.  An image is loaded once a location while the browser
+runs, and one that does not load, or is not a PNG, stays a link.  A
+location whose
 bytes are a PNG opens as an image, whatever its name or type.  Colours
 are 24-bit when `COLORTERM` is `truecolor` or `24bit`, else the nearest
 of the 256-colour palette.
@@ -99,5 +104,5 @@ Page Down.
 
 ## Not yet
 
-Images other than PNG, images drawn inline in the page, and files sent
-from a form.
+Images other than PNG, images given as data: urls, and files sent from
+a form.

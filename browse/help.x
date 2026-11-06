@@ -33,7 +33,7 @@
       "- `o`: open a location; `O`: open one in a new tab"
       "- `r`: load this document again"
       ""
-      "An image is linked as its text in brackets: `Enter` shows it, fitted to the window, and back returns.  PNG images are shown; 24-bit colour when `COLORTERM` is `truecolor` or `24bit`, else 256 colours."
+      "An image is linked as its text in brackets: `Enter` shows it, fitted to the window, and back returns; `i` shows images in the page, below their brackets, or as links again.  PNG images are shown; 24-bit colour when `COLORTERM` is `truecolor` or `24bit`, else 256 colours."
       ""
       "## Forms"
       ""

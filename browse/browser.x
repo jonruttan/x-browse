@@ -25,10 +25,18 @@
 ;
 ; An image is a document as a page is, kept in the tab's history, its
 ; page empty: the screen's cells hold a style a cell, not 24-bit colour,
-; so (browse-picture B COLOURS) answers the image as lines of text and
+; so (browse-pictures B COLOURS) answers the image as lines of text and
 ; escapes, fitted to the window, for the terminal to be given after the
 ; screen.  An image linked from a page is opened by Enter on its link,
 ; and the back keys return from it.
+;
+; With images inline (i turns them on and off, for every tab), laying a
+; page out loads each image it names, once a location, and below each
+; one that is a PNG the page keeps empty lines, as many as its picture
+; is tall: the picture fitted to the page's width and a row short of the
+; window.  Its brackets stay a link to it.  (browse-pictures B COLOURS)
+; answers the lines of those pictures that are in the window, each with
+; its row.  An image that does not load stays its brackets alone.
 ;
 ; Documents are loaded by the browser's loader, (doc-load LOC) unless
 ; one is given, and (LOADER LOC post BODY) for a form sent by POST: a
@@ -51,8 +59,10 @@
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
 ; asked, 6 whether to quit, 7 the loader, 8 whether the screen is to be
 ; drawn whole, 9 the text last searched for, 10 the line it was found
-; on, or nil, 11 the picture last drawn, ((DOC COLS ROWS COLOURS) .
-; LINES), or nil.  A tab's state is a vector: 0 the location, 1 the
+; on, or nil, 11 the pictures drawn so far, ((COLS COLOURS) . ((DOC
+; ROWS LINES) ...)), 12 whether images are inline, 13 the images loaded
+; for pages, ((LOCATION . DOCUMENT) ...), the document nil for one that
+; did not load or is not an image.  A tab's state is a vector: 0 the location, 1 the
 ; document, 2 the history, newest first, each (LOCATION DOCUMENT TOP
 ; SELECTED).  A question is (WHAT . TEXT): WHAT here or tab for a
 ; location to open there, search, or field for the selected field's text.
@@ -71,11 +81,85 @@
 (def %window (fn (_ b) (Tabs current (%tabs b))))
 (def %state (fn (_ b) (if (< (%index b) 0) () (List ref (%index b) (%get b 1)))))
 
+; --- pictures ----------------------------------------------------------------
+
+; The rows an inline picture may take: a row short of the window.
+(def %inline-rows (fn (_ b) (if (< (%body-rows b) 2) 1 (- (%body-rows b) 1))))
+
+; The image at LOC for a page, loaded once: its document, or nil.
+(def %inline-image
+  (fn (_ b loc)
+    (def known (Assoc find loc (%get b 13)))
+    (if (not (null? known)) (rest known)
+      ((fn (_ doc)
+         (%put! b 13 (pair (pair loc doc) (%get b 13)))
+         doc)
+       (guard (e ())
+         ((fn (_ got) (if (eq? (first (rest got)) (lit image)) (rest got) ()))
+          (doc-at loc ((%get b 7) loc))))))))
+
+; Image document DOC's picture ROWS rows at most, the window's width, in
+; COLOURS: its lines, made once a size.
+(def %picture
+  (fn (_ b doc rows colours)
+    (def key (list (%cols b) colours))
+    (unless (if (null? (%get b 11)) #f (equal? (first (%get b 11)) key)) (%put! b 11 (pair key ())))
+    (def made (List find (fn (_ e) (if (same? (first e) doc) (= (List ref 1 e) rows) #f)) (rest (%get b 11))))
+    (if (not (null? made)) (List ref 2 made)
+      ((fn (_ lines)
+         (%put! b 11 (pair key (pair (list doc rows lines) (rest (%get b 11)))))
+         lines)
+       (Picture lines (rest doc) (%cols b) rows colours)))))
+
+; The rows image document DOC takes inline.
+(def %picture-height
+  (fn (_ b doc)
+    ((fn (_ size) (int/ (+ (List ref 1 size) 1) 2))
+     (Picture fit (List ref 1 doc) (List ref 2 doc) (%cols b) (%inline-rows b)))))
+
+; BLOCKS with each image, of LOC's page, that loads followed by empty
+; lines for its picture, its title the mark that files it as a picture.
+(def %with-pictures
+  (fn (_ b loc blocks)
+    (def inlines
+      (fn (self xs)
+        (List flat-map
+          (fn (_ x)
+            (match
+              ((str? x) (list x))
+              ((eq? (first x) (lit image))
+                ((fn (_ doc)
+                   (if (null? doc) (list x)
+                     (pair (list (lit image) (List ref 1 x) (lit picture) (List ref 3 x))
+                           (List map (fn (_ k) (list (lit hardbreak))) (List range 0 (+ (%picture-height b doc) 1))))))
+                 (%inline-image b (doc-resolve loc (List ref 1 x)))))
+              ((eq? (first x) (lit link)) (list (list (lit link) (List ref 1 x) (List ref 2 x) (self (List ref 3 x)))))
+              ((match ((eq? (first x) (lit emph)) #t) ((eq? (first x) (lit strong)) #t) (#t #f))
+                (list (list (first x) (self (List ref 1 x)))))
+              (#t (list x))))
+          xs)))
+    ((fn (self bs)
+       (List map
+         (fn (_ blk)
+           (match
+             ((eq? (first blk) (lit heading)) (list (lit heading) (List ref 1 blk) (inlines (List ref 2 blk))))
+             ((eq? (first blk) (lit paragraph)) (list (lit paragraph) (inlines (List ref 1 blk))))
+             ((eq? (first blk) (lit block-quote)) (list (lit block-quote) (self (List ref 1 blk))))
+             ((eq? (first blk) (lit list))
+               (list (lit list) (List ref 1 blk) (List ref 2 blk) (List ref 3 blk)
+                     (List map (fn (_ item) (self item)) (List ref 4 blk))))
+             (#t blk)))
+         bs))
+     blocks)))
+
+; DOC, at LOC, laid out for B: an image's page empty, a page's images
+; inline when they are on.
 (def %page
-  (fn (_ doc width)
-    (match ((eq? (first doc) (lit text)) (Page text (rest doc) width))
-           ((eq? (first doc) (lit image)) (Page text "" width))
-           (#t (Page markdown (doc-blocks doc) width)))))
+  (fn (_ b loc doc)
+    (match ((eq? (first doc) (lit text)) (Page text (rest doc) (%cols b)))
+           ((eq? (first doc) (lit image)) (Page text "" (%cols b)))
+           ((%get b 12) (Page markdown (%with-pictures b loc (doc-blocks doc)) (%cols b)))
+           (#t (Page markdown (doc-blocks doc) (%cols b))))))
 
 (def %err-text
   (fn (_ e)
@@ -112,7 +196,7 @@
 
 (def %show!
   (fn (_ b w loc doc top selected)
-    (Window show w (%page doc (%cols b)) (%body-rows b))
+    (Window show w (%page b loc doc) (%body-rows b))
     (Window retitle w (doc-title loc doc))
     (Window go w top (%body-rows b))
     (Window select w selected (%body-rows b))))
@@ -128,7 +212,7 @@
         (def loc (first got))
         (def doc (rest got))
         (if (if (eq? where (lit tab)) #t (< (%index b) 0))
-          (do (def w (Window make (doc-title loc doc) (%page doc (%cols b))))
+          (do (def w (Window make (doc-title loc doc) (%page b loc doc)))
               (Tabs add (%tabs b) w)
               (%put! b 1 (List append (%get b 1) (list (Vector of loc doc ()))))
               (%go-fragment! b w loc))
@@ -353,25 +437,39 @@
          (Tabs close (%tabs b) k))
        (%index b)))))
 
+; Every tab laid out again.
+(def %lay-out!
+  (fn (_ b)
+    (%put! b 8 #t)
+    ((fn (self k states)
+       (unless (null? states)
+         (do (Window show (Tabs window (%tabs b) k)
+               (%page b (Vector ref 0 (first states)) (Vector ref 1 (first states))) (%body-rows b))
+             (self (+ k 1) (rest states)))))
+     0 (%get b 1))))
+
 ; Every tab laid out again, ROWS by COLS.
 (def browse-resize!
   (fn (_ b rows cols)
     (%put! b 2 rows)
     (%put! b 3 cols)
-    (%put! b 8 #t)
-    ((fn (self k states)
-       (unless (null? states)
-         (do (Window show (Tabs window (%tabs b) k) (%page (Vector ref 1 (first states)) cols) (%body-rows b))
-             (self (+ k 1) (rest states)))))
-     0 (%get b 1))))
+    (%lay-out! b)))
+
+; Images inline turned on or off, every tab laid out again.
+(def %inline!
+  (fn (_ b)
+    (%put! b 12 (not (%get b 12)))
+    (%lay-out! b)
+    (%say! b (if (%get b 12) "images inline" "images as links"))))
 
 (def browse-make
   (fn (_ rows cols . loader)
-    (def b (Vector make 12 ()))
+    (def b (Vector make 14 ()))
     (%put! b 0 (Tabs make))
     (%put! b 2 rows)
     (%put! b 3 cols)
     (%put! b 6 #f)
+    (%put! b 12 #f)
     (%put! b 7 (if (null? loader) doc-load (first loader)))
     (%put! b 8 #t)
     b))
@@ -476,6 +574,7 @@
           ((%key? key (list "o")) (%put! b 5 (pair (lit here) "")))
           ((%key? key (list "O")) (%put! b 5 (pair (lit tab) "")))
           ((%key? key (list "r")) (%reload! b))
+          ((%key? key (list "i")) (%inline! b))
           ((%key? key (list "]" ">")) (Tabs next (%tabs b)))
           ((%key? key (list "[" "<")) (Tabs prev (%tabs b)))
           ((%key? key (list "1" "2" "3" "4" "5" "6" "7" "8" "9"))
@@ -571,26 +670,35 @@
     (%draw-status! b screen)
     screen))
 
-; The current tab's image as lines of text, fitted to the window, in
-; COLOURS (rgb or indexed, as Picture lines takes them), each to be
-; written from the window's first row down; nil when it shows no image.
-; The same image at the same size answers the same list.
-(def browse-picture
+; The pictures in the current tab's window, in COLOURS (rgb or indexed,
+; as Picture lines takes them): ((ROW . TEXT) ...), each line of text and
+; escapes with the screen row to write it on.  An image document is its
+; picture fitted to the window; a page with images inline, the lines of
+; their pictures that are in the window.
+(def browse-pictures
   (fn (_ b colours)
     (def s (%state b))
     (def doc (if (null? s) () (Vector ref 1 s)))
-    (if (if (null? doc) #t (not (eq? (first doc) (lit image)))) ()
-      ((fn (_ key cached)
-         (if (if (null? cached) #f
-               ((fn (_ k) (match ((not (eq? (first k) doc)) #f)
-                                 ((not (= (List ref 1 k) (%cols b))) #f)
-                                 ((not (= (List ref 2 k) (%body-rows b))) #f)
-                                 (#t (eq? (List ref 3 k) colours))))
-                (first cached)))
-           (rest cached)
-           ((fn (_ lines) (%put! b 11 (pair key lines)) lines)
-            (Picture lines (rest doc) (%cols b) (%body-rows b) colours))))
-       (list doc (%cols b) (%body-rows b) colours) (%get b 11)))))
+    (def w (%window b))
+    (def n (%body-rows b))
+    (def rows-of
+      (fn (_ lines line)
+        (List filter (fn (_ r) (if (< 0 (first r)) (< (first r) (+ n 1)) #f))
+          (List map (fn (_ k) (pair (+ (- (+ line k) (Window top w)) 1) (List ref k lines)))
+            (List range 0 (List length lines))))))
+    (match
+      ((null? doc) ())
+      ((eq? (first doc) (lit image)) (rows-of (%picture b doc n colours) (Window top w)))
+      ((not (%get b 12)) ())
+      (#t (List flat-map
+            (fn (_ l)
+              (if (if (eq? (List ref 1 l) (lit picture)) (not (null? (List ref 2 l))) #f)
+                ((fn (_ image)
+                   (if (null? image) ()
+                     (rows-of (%picture b image (%inline-rows b) colours) (+ (first (List last (List ref 2 l))) 1))))
+                 (%inline-image b (doc-resolve (Vector ref 0 s) (first l))))
+                ()))
+            (Page links (Window page w)))))))
 
 (provide browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
-  browse-repaint? browse-tabs browse-location browse-message browse-picture)
+  browse-repaint? browse-tabs browse-location browse-message browse-pictures)
