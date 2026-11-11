@@ -7,7 +7,7 @@
 ; @license MIT No Attribution (MIT-0)
 ;
 ; A location is a path on this machine, an http or https url, a data:
-; url in base64, or about:help.  A link's destination is resolved against the location of
+; url, or about:help.  A link's destination is resolved against the location of
 ; the document it is in, as a browser resolves a relative url: a path
 ; against the document's directory, an absolute path against the
 ; host.  `#FRAGMENT` names a heading of the document, by the slug
@@ -176,23 +176,33 @@
     ((fn (_ t) (if (str=? t "") "text/plain" t))
      (Str8 downcase (first (%cut ";" (first (%cut "," (Str8 sub 5 (- (Str8 length path) 5) path)))))))))
 
-; The document a data: url holds, data:[TYPE][;PARAM...];base64,DATA.
+; TEXT as the document TYPE names: Markdown, HTML, else text.
+(def %typed
+  (fn (_ type text)
+    (match ((str=? type "text/markdown") (%markdown text))
+           ((str=? type "text/html") (%html text))
+           (#t (pair (lit text) text)))))
+
+; The document a data: url holds, data:[TYPE][;PARAM...][;base64],DATA:
+; DATA in base64, or percent-encoded without ;base64.  An image is read
+; from base64 only.
 (def %data
   (fn (_ path)
     (def parts (%cut "," (Str8 sub 5 (- (Str8 length path) 5) path)))
-    (unless (if (null? (rest parts)) #f (Str8 ends? ";base64" (Str8 downcase (first parts))))
-      (Err raise (lit value) "a data: url not in base64" path))
-    (def region
-      (guard (e (Err raise (lit value) "a data: url whose base64 does not decode" path))
-        (Base64 decode-region (rest parts))))
-    (def bytes (first region))
-    (def n (List ref 2 region))
+    (when (null? (rest parts)) (Err raise (lit value) "a data: url with no comma" path))
     (def type (%data-type path))
-    (match ((%png? bytes) (%image bytes n))
-           ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) path))
-           ((str=? type "text/markdown") (%markdown (Str8 sub 0 n bytes)))
-           ((str=? type "text/html") (%html (Str8 sub 0 n bytes)))
-           (#t (pair (lit text) (Str8 sub 0 n bytes))))))
+    (if (Str8 ends? ";base64" (Str8 downcase (first parts)))
+      ((fn (_ region)
+         ((fn (_ bytes n)
+            (match ((%png? bytes) (%image bytes n))
+                   ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) path))
+                   (#t (%typed type (Str8 sub 0 n bytes)))))
+          (first region) (List ref 2 region)))
+       (guard (e (Err raise (lit value) "a data: url whose base64 does not decode" path))
+         (Base64 decode-region (rest parts))))
+      (if (Str8 starts? "image/" type)
+        (Err raise (lit value) (Str8 append "an image in a data: url not in base64: " type) path)
+        (%typed type (Http url-decode (rest parts)))))))
 
 ; Markdown text listing the directory DIR, its entries linked, a
 ; directory's name ending /.

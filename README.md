@@ -8,8 +8,8 @@ attributes, in tabs, and PNG images in half-block characters.
     x -l browse -- [LOCATION ...]
     x -l browse -- -d [-w N] LOCATION
 
-A location is a path, an `http://` or `https://` url, a `data:` url in
-base64, or `about:help`.
+A location is a path, an `http://` or `https://` url, a `data:` url,
+or `about:help`.
 Each location given opens in a tab of its own; with none, the browser
 opens the current directory.  A file ending `.md`, `.markdown` or
 `.mdown`, or a response of type `text/markdown`, is read as Markdown; one
@@ -94,7 +94,7 @@ of the 256-colour palette.
 
 ## Requirements
 
-x-lang v0.47.0: `x/codec/markdown`, `x/codec/html` with forms, `x/codec/png`,
+x-lang v0.52.0: `x/codec/markdown`, `x/codec/html` with forms, `x/codec/png`,
 and `x/tui` with fields and pictures, and `Term key` naming Page Up and
 Page Down.
 
@@ -105,5 +105,5 @@ Page Down.
 
 ## Not yet
 
-Images other than PNG, `data:` urls not in base64, and files sent from
-a form.
+Images other than PNG, images in `data:` urls not in base64, and files
+sent from a form.
