@@ -61,7 +61,7 @@
       "- `Ctrl-L`: draw the screen again"
       "- `q` `Ctrl-C`: quit"
       ""
-      "A location is a path, an `http://` or `https://` url, a `data:` url in base64, or `about:help`."
+      "A location is a path, an `http://` or `https://` url, a `data:` url, or `about:help`."
       "")))
 
 (provide browse/help browse-help)
