@@ -1,15 +1,18 @@
 # x-browse
 
-A terminal browser on x-lang, in the vein of lynx, links and w3m, as a
-lang bundle.  It browses Markdown and HTML: headings, bold, italic,
-code, quotes, lists, links and forms drawn with the terminal's
-attributes, in tabs, and PNG images in half-block characters.
+A terminal browser written in
+[x-lang](https://github.com/jonruttan/x-lang), in the vein of lynx, links
+and w3m, loaded as a lang.  It browses Markdown and HTML: headings, bold,
+italic, code, quotes, lists, links and forms drawn with the terminal's
+attributes, in tabs, and PNG images in half-block characters.  It runs no
+scripts, applies no stylesheets and keeps no cookies.
 
     x -l browse -- [LOCATION ...]
     x -l browse -- -d [-w N] LOCATION
+    x -l browse -- -V | -h
 
-A location is a path, an `http://` or `https://` url, a `data:` url,
-or `about:help`.
+A location is a path, a `file://`, `http://` or `https://` url, a `data:`
+url, or `about:help`.
 Each location given opens in a tab of its own; with none, the browser
 opens the current directory.  A file ending `.md`, `.markdown` or
 `.mdown`, or a response of type `text/markdown`, is read as Markdown; one
@@ -92,11 +95,17 @@ bytes are a PNG opens as an image, whatever its name or type.  Colours
 are 24-bit when `COLORTERM` is `truecolor` or `24bit`, else the nearest
 of the 256-colour palette.
 
-## Requirements
+## https
 
-x-lang v0.52.0: `x/codec/markdown`, `x/codec/html` with forms, `x/codec/png`,
-and `x/tui` with fields and pictures, and `Term key` naming Page Up and
-Page Down.
+https is x-lang's own TLS 1.3, written in x.  The server's certificate is
+checked against Mozilla's roots for the host.  Neither has had an
+independent review.
+
+## Install
+
+It needs x-lang v0.52.0, the release `lang.xon` declares.
+
+    make install    # into <share>/langs/browse
 
 ## Tests
 
@@ -106,4 +115,8 @@ Page Down.
 ## Not yet
 
 Images other than PNG, images in `data:` urls not in base64, and files
-sent from a form.
+sent from a form.  A table is shown a line a row.
+
+## Licence
+
+MIT No Attribution (MIT-0). See [LICENSE](LICENSE).
