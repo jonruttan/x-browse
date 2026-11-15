@@ -73,6 +73,19 @@ heading's fragment names, and what loading a location answers.
 ---
     ('image 2 1 "ff0000ff00ff00ff" "dot.png" ())
 
+### a GIF is an image as a PNG is: from a file, or a data: url; a GIF's bytes under another name are still an image
+
+```browse
+(def g (doc-load "tests/fixtures/dot.gif"))
+(def u (doc-load "data:image/gif;base64,R0lGODlhAgABAPAAAP8AAAD/ACH5BAAAAAAALAAAAAACAAEAAAICRAoAOw=="))
+(def t (doc-load "data:text/plain;base64,R0lGODlhAgABAPAAAP8AAAD/ACH5BAAAAAAALAAAAAACAAEAAAICRAoAOw=="))
+(write (list (first g) (List ref 1 g) (List ref 2 g) (Bytes hex (list (List ref 3 g) 0 8))
+             (doc-title "tests/fixtures/dot.gif" g)
+             (Bytes hex (list (List ref 3 u) 0 8)) (first t)))
+```
+---
+    ('image 2 1 "ff0000ff00ff00ff" "dot.gif" "ff0000ff00ff00ff" 'image)
+
 ### a data: url in base64: a PNG an image, a page by its type, text without one; its title is data: and the type; another image type, or bad base64, is refused
 
 ```browse
@@ -82,11 +95,11 @@ heading's fragment names, and what loading a location answers.
              (doc-load "data:text/markdown;charset=utf-8;base64,IyBIaQoKVGhlcmUu")
              (doc-load "data:;base64,IyBIaQoKVGhlcmUu")
              (doc-title "data:;base64,IyBIaQoKVGhlcmUu" (doc-load "data:;base64,IyBIaQoKVGhlcmUu"))
-             (guard (e (e msg)) (doc-load "data:image/gif;base64,R0lGODlh"))
+             (guard (e (e msg)) (doc-load "data:image/jpeg;base64,/9j/4AAQ"))
              (guard (e (e msg)) (doc-load "data:;base64,!!!!"))))
 ```
 ---
-    ('image 2 1 "ff0000ff00ff00ff" "data:image/png" ('markdown ('heading 1 ("Hi")) ('paragraph ("There."))) ('text . "# Hi\n\nThere.") "data:text/plain" "an image this browser cannot show: image/gif" "a data: url whose base64 does not decode")
+    ('image 2 1 "ff0000ff00ff00ff" "data:image/png" ('markdown ('heading 1 ("Hi")) ('paragraph ("There."))) ('text . "# Hi\n\nThere.") "data:text/plain" "an image this browser cannot show: image/jpeg" "a data: url whose base64 does not decode")
 
 ### a data: url not in base64 is percent-decoded: a page by its type, text without one; an image, or one with no comma, is refused
 
@@ -109,6 +122,14 @@ heading's fragment names, and what loading a location answers.
 ```
 ---
     "\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m\n"
+
+### a GIF dumps as a PNG of the same pixels does
+
+```browse
+(write (equal? (browse-dump "tests/fixtures/dot.gif" 40) (browse-dump "tests/fixtures/dot.png" 40)))
+```
+---
+    #t
 
 ### lynx's: link text led by its number, the references after
 

@@ -32,7 +32,7 @@
 ;
 ; With images inline (i turns them on and off, for every tab), laying a
 ; page out loads each image it names, once a location, and below each
-; one that is a PNG the page keeps empty lines, as many as its picture
+; one that is an image the page keeps empty lines, as many as its picture
 ; is tall: the picture fitted to the page's width and a row short of the
 ; window.  Its brackets stay a link to it.  (browse-pictures B COLOURS)
 ; answers the lines of those pictures that are in the window, each with
