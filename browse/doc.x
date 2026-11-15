@@ -15,10 +15,10 @@
 ;
 ; A document is (KIND . CONTENT): markdown with its blocks, html with its
 ; title (or nil) and then its blocks, image with its width, height and
-; RGBA pixels as (Png decode) answers them, or text with its string.
-; Bytes that start with PNG's signature are an image, whatever the
-; name or type; a response of any other image type is one this browser
-; cannot show.  A path
+; RGBA pixels as (Png decode) or (Gif decode) answers them, or text with
+; its string.  Bytes that start with PNG's or GIF's signature are an
+; image, whatever the name or type; a response of any other image type
+; is one this browser cannot show.  A path
 ; ending .md, .markdown or .mdown, or a response whose type is
 ; text/markdown, is Markdown; one ending .html or .htm, or a response
 ; whose type is text/html, is HTML; a directory is a Markdown list of its
@@ -39,6 +39,7 @@
 (import x/codec/markdown)
 (import x/codec/html)
 (import x/codec/png)
+(import x/codec/gif)
 (import x/codec/base64)
 (import browse/help browse-help)
 
@@ -167,8 +168,12 @@
 (def %html (fn (_ text) (pair (lit html) (pair (Html title text) (Html parse text)))))
 
 (def %png? (fn (_ bytes) (Str8 starts? "\x89PNG\r\n\x1a\n" bytes)))
-; BYTES are N long: a PNG holds NUL bytes, which end a string's own length.
-(def %image (fn (_ bytes n) (pair (lit image) (Png decode bytes 0 n))))
+(def %gif? (fn (_ bytes) (if (Str8 starts? "GIF87a" bytes) #t (Str8 starts? "GIF89a" bytes))))
+(def %picture? (fn (_ bytes) (if (%png? bytes) #t (%gif? bytes))))
+; BYTES are N long: an image holds NUL bytes, which end a string's own length.
+(def %image
+  (fn (_ bytes n)
+    (pair (lit image) (if (%png? bytes) (Png decode bytes 0 n) (Gif decode bytes 0 n)))))
 
 ; The type a data: url names, text/plain when it names none.
 (def %data-type
@@ -194,7 +199,7 @@
     (if (Str8 ends? ";base64" (Str8 downcase (first parts)))
       ((fn (_ region)
          ((fn (_ bytes n)
-            (match ((%png? bytes) (%image bytes n))
+            (match ((%picture? bytes) (%image bytes n))
                    ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) path))
                    (#t (%typed type (Str8 sub 0 n bytes)))))
           (first region) (List ref 2 region)))
@@ -238,7 +243,7 @@
     (def type (%header (rest (Assoc find (lit headers) r)) "content-type"))
     (def from ((fn (_ p) (if (null? p) (first (doc-fragment url)) (rest p))) (Assoc find (lit url) r)))
     (def doc
-      (match ((%png? text) (%image text (List length body)))
+      (match ((%picture? text) (%image text (List length body)))
              ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) url))
              ((Str8 starts? "text/markdown" type) (%markdown text))
              ((Str8 starts? "text/html" type) (%html text))
@@ -275,7 +280,7 @@
            (match ((eq? type (lit dir)) (%markdown (%listing path)))
                   ((eq? type (lit file))
                     ((fn (_ text)
-                       (match ((%png? text) (%image text (Assoc get (lit size) (File stat path))))
+                       (match ((%picture? text) (%image text (Assoc get (lit size) (File stat path))))
                               ((%markdown-name? path) (%markdown text))
                               ((%html-name? path) (%html text))
                               (#t (pair (lit text) text))))

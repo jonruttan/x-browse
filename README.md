@@ -4,7 +4,7 @@ A terminal browser written in
 [x-lang](https://github.com/jonruttan/x-lang), in the vein of lynx, links
 and w3m, loaded as a lang.  It browses Markdown and HTML: headings, bold,
 italic, code, quotes, lists, links and forms drawn with the terminal's
-attributes, in tabs, and PNG images in half-block characters.  It runs no
+attributes, in tabs, and PNG and GIF images in half-block characters.  It runs no
 scripts, applies no stylesheets and keeps no cookies.
 
     x -l browse -- [LOCATION ...]
@@ -77,7 +77,7 @@ finds it as it was left.
 `-d`, `--dump`, writes the document as text on standard output, laid out
 `-w N`, `--width N`, columns wide (80 when not given), as lynx's `-dump` does: each link's text
 led by its number in brackets, a form's fields drawn as the browser draws
-them, and after the document the list of where the links go.  A PNG
+them, and after the document the list of where the links go.  A PNG or GIF
 image is written as its picture in half blocks and 24-bit colour, no
 wider than the columns.
 
@@ -89,9 +89,10 @@ character cell in half blocks; the back keys return.  `i` shows a page's
 images inline, each below its brackets, fitted to the page's width and a
 row short of the window, and `i` again puts them back to links; it holds
 for every tab.  An image is loaded once a location while the browser
-runs, and one that does not load, or is not a PNG, stays a link.  A
+runs, and one that does not load, or is not a PNG or a GIF, stays a link.  A
 location whose
-bytes are a PNG opens as an image, whatever its name or type.  Colours
+bytes are a PNG or a GIF opens as an image, whatever its name or type; a
+GIF shows its first image, so an animation stands still.  Colours
 are 24-bit when `COLORTERM` is `truecolor` or `24bit`, else the nearest
 of the 256-colour palette.
 
@@ -114,7 +115,7 @@ It needs x-lang v0.55.0, the release `lang.xon` declares.
 
 ## Not yet
 
-Images other than PNG, images in `data:` urls not in base64, and files
+Images other than PNG and GIF, images in `data:` urls not in base64, and files
 sent from a form.  A table is shown a line a row.
 
 ## Licence
