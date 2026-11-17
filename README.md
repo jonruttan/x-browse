@@ -1,5 +1,7 @@
 # x-browse
 
+<p align="center"><img src="docs/bitwise-banner.svg" alt="x-browse, with Bitwise the owl" width="100%"></p>
+
 A terminal browser written in
 [x-lang](https://github.com/jonruttan/x-lang), in the vein of lynx, links
 and w3m, loaded as a lang.  It browses Markdown and HTML: headings, bold,
