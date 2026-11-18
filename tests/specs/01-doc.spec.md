@@ -158,3 +158,22 @@ heading's fragment names, and what loading a location answers.
 ```
 ---
     "Fixture Page\n\nA [1]page and [2]home, with bold, italic\nand code.\n\n• one\n• two an image\n\nName | Value\n\na | 1\n\nkept   as\n  written\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/index.md\n"
+
+## pdf
+
+### a PDF file is its headings and paragraphs, by its signature; its title is its /Title
+
+```browse
+(def p (doc-load "tests/fixtures/hello.pdf"))
+(write (list (first p) (doc-title "tests/fixtures/hello.pdf" p) (doc-blocks p)))
+```
+---
+    ('pdf "Fixture title" (('heading 1 ("A PDF fixture")) ('paragraph ("This paragraph is set on two lines, the first reaching the margin and a word broken across them, in " ('strong ("bold")) ".")) ('paragraph ("A second paragraph."))))
+
+### a PDF dumps as the page it is laid out as
+
+```browse
+(write (browse-dump "tests/fixtures/hello.pdf" 40))
+```
+---
+    "A PDF fixture\n\nThis paragraph is set on two lines, the\nfirst reaching the margin and a word\nbroken across them, in bold.\n\nA second paragraph.\n"

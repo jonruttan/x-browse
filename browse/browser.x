@@ -299,7 +299,9 @@
 ; DOC with BLOCKS in place of its own.
 (def %with-blocks
   (fn (_ doc blocks)
-    (if (eq? (first doc) (lit html)) (pair (lit html) (pair (first (rest doc)) blocks)) (pair (lit markdown) blocks))))
+    (if (if (eq? (first doc) (lit html)) #t (eq? (first doc) (lit pdf)))
+      (pair (first doc) (pair (first (rest doc)) blocks))
+      (pair (lit markdown) blocks))))
 
 ; The selected entry's number among the page's fields.
 (def %field-ordinal

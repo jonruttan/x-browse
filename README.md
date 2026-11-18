@@ -21,7 +21,9 @@ opens the current directory.  A file ending `.md`, `.markdown` or
 ending `.html` or `.htm`, or a response of type `text/html`, as HTML,
 shown as the same headings, lists, quotes, code and links, a table as a
 line a row; a directory is shown as a list of its entries, linked;
-anything else is shown as text.
+anything else is shown as text.  A file or response whose bytes start
+`%PDF-` is a PDF, whatever its name or type: its text is shown as
+headings and paragraphs, read from where the file places its glyphs.
 
 ## Keys
 
@@ -106,7 +108,7 @@ independent review.
 
 ## Install
 
-It needs x-lang v0.55.0, the release `lang.xon` declares.
+It needs x-lang v0.56.0, the release `lang.xon` declares.
 
     make install    # into <share>/langs/browse
 
@@ -118,7 +120,8 @@ It needs x-lang v0.55.0, the release `lang.xon` declares.
 ## Not yet
 
 Images other than PNG and GIF, images in `data:` urls not in base64, and files
-sent from a form.  A table is shown a line a row.
+sent from a form.  A table is shown a line a row.  A PDF's images, links,
+tables and columns, and an encrypted PDF.
 
 ## Licence
 

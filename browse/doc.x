@@ -13,11 +13,13 @@
 ; host.  `#FRAGMENT` names a heading of the document, by the slug
 ; GitHub gives it.
 ;
-; A document is (KIND . CONTENT): markdown with its blocks, html with its
-; title (or nil) and then its blocks, image with its width, height and
+; A document is (KIND . CONTENT): markdown with its blocks, html or pdf
+; with its title (or nil) and then its blocks, image with its width, height and
 ; RGBA pixels as (Png decode) or (Gif decode) answers them, or text with
 ; its string.  Bytes that start with PNG's or GIF's signature are an
-; image, whatever the name or type; a response of any other image type
+; image, and bytes that start %PDF- a PDF, read into the headings and
+; paragraphs its text spells (x/codec/pdf-text),
+; whatever the name or type; a response of any other image type
 ; is one this browser cannot show.  A path
 ; ending .md, .markdown or .mdown, or a response whose type is
 ; text/markdown, is Markdown; one ending .html or .htm, or a response
@@ -174,7 +176,13 @@
 (def %image
   (fn (_ bytes n)
     (pair (lit image) (if (%png? bytes) (Png decode bytes 0 n) (Gif decode bytes 0 n)))))
-
+(def %pdf? (fn (_ bytes) (Str8 starts? "%PDF-" bytes)))
+; A PDF's N BYTES as (pdf TITLE . BLOCKS).  The reader is loaded by the
+; first PDF opened, not with the browser.
+(def %pdf
+  (fn (_ bytes n)
+    (import x/codec/pdf-text)
+    (pair (lit pdf) (pair (PdfText title bytes n) (PdfText parse bytes n)))))
 ; The type a data: url names, text/plain when it names none.
 (def %data-type
   (fn (_ path)
@@ -200,6 +208,7 @@
       ((fn (_ region)
          ((fn (_ bytes n)
             (match ((%picture? bytes) (%image bytes n))
+                   ((%pdf? bytes) (%pdf bytes n))
                    ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) path))
                    (#t (%typed type (Str8 sub 0 n bytes)))))
           (first region) (List ref 2 region)))
@@ -244,6 +253,7 @@
     (def from ((fn (_ p) (if (null? p) (first (doc-fragment url)) (rest p))) (Assoc find (lit url) r)))
     (def doc
       (match ((%picture? text) (%image text (List length body)))
+             ((%pdf? text) (%pdf text (List length body)))
              ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) url))
              ((Str8 starts? "text/markdown" type) (%markdown text))
              ((Str8 starts? "text/html" type) (%html text))
@@ -281,6 +291,7 @@
                   ((eq? type (lit file))
                     ((fn (_ text)
                        (match ((%picture? text) (%image text (Assoc get (lit size) (File stat path))))
+                              ((%pdf? text) (%pdf text (Assoc get (lit size) (File stat path))))
                               ((%markdown-name? path) (%markdown text))
                               ((%html-name? path) (%html text))
                               (#t (pair (lit text) text))))
@@ -314,18 +325,19 @@
                  (#t (self (List ref 1 x)))))
         inlines))))
 
-; The blocks of a Markdown or HTML document; nil for text.
+; The blocks of a Markdown, HTML or PDF document; nil for text.
 (def doc-blocks
   (fn (_ doc)
     (match ((eq? (first doc) (lit markdown)) (rest doc))
            ((eq? (first doc) (lit html)) (rest (rest doc)))
+           ((eq? (first doc) (lit pdf)) (rest (rest doc)))
            (#t ()))))
 
-; A document's title: an HTML page's <title>, else its first heading's
+; A document's title: an HTML page's <title> or a PDF's, else its first heading's
 ; text, else the last part of LOC.
 (def doc-title
   (fn (_ loc doc)
-    (def t (if (eq? (first doc) (lit html)) (first (rest doc)) ()))
+    (def t (if (if (eq? (first doc) (lit html)) #t (eq? (first doc) (lit pdf))) (first (rest doc)) ()))
     (def h (if (null? t) (List find (fn (_ b) (eq? (first b) (lit heading))) (doc-blocks doc)) ()))
     (match
       ((not (null? t)) t)
