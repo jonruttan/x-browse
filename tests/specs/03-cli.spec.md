@@ -11,10 +11,10 @@ accepts is what usage prints, in short and --long spellings.
 
 ```browse
 (def text (Opts usage browse-options))
-(write (List map (fn (_ s) (Str8 includes? s text)) (list "-d,--dump" "-w,--width" "-V,--version" "-h,--help" "x -l browse --")))
+(write (List map (fn (_ s) (Str8 includes? s text)) (list "-d,--dump" "-w,--width" "-t,--to" "-V,--version" "-h,--help" "x -l browse --")))
 ```
 ---
-    (#t #t #t #t #t)
+    (#t #t #t #t #t #t)
 
 ### short, long and --long=value spell one option; locations pass through; an unknown option is named
 
@@ -29,3 +29,13 @@ accepts is what usage prints, in short and --long spellings.
 ```
 ---
     (#t "40" ("a.md") #t "40" ("a.md" "b.md") "-dump")
+
+### --to names a format, and a format it does not write is refused
+
+```browse
+(import x/sys/opts)
+(def o (Opts parse browse-options (list "-t" "html" "a.md")))
+(write (list (Opts value o "-t") (Opts operands o) (browse-main (list "--to=rtf" "a.md"))))
+```
+---
+    ("html" ("a.md") 2)

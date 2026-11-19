@@ -11,6 +11,7 @@ scripts, applies no stylesheets and keeps no cookies.
 
     x -l browse -- [LOCATION ...]
     x -l browse -- -d [-w N] LOCATION
+    x -l browse -- -t FORMAT LOCATION
     x -l browse -- -V | -h
 
 A location is a path, a `file://`, `http://` or `https://` url, a `data:`
@@ -84,6 +85,17 @@ led by its number in brackets, a form's fields drawn as the browser draws
 them, and after the document the list of where the links go.  A PNG or GIF
 image is written as its picture in half blocks and 24-bit colour, no
 wider than the columns.
+
+## --to
+
+`-t FORMAT`, `--to FORMAT`, writes the document on standard output in a
+format: `text`, as `--dump` writes it, or `html`, a page holding the
+document's blocks under its title.  A Markdown file, an HTML page or a
+PDF goes in and HTML comes out; a text file is one code block, and an
+image has no HTML form.
+
+    x -l browse -- -t html notes.md > notes.html
+    x -l browse -- -t html paper.pdf > paper.html
 
 ## Images
 

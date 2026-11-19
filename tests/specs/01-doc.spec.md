@@ -177,3 +177,29 @@ heading's fragment names, and what loading a location answers.
 ```
 ---
     "A PDF fixture\n\nThis paragraph is set on two lines, the\nfirst reaching the margin and a word\nbroken across them, in bold.\n\nA second paragraph.\n"
+
+## html
+
+### a document is written as an HTML page under its title
+
+```browse
+(write (browse-html "tests/fixtures/page.html"))
+```
+---
+    "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>A Page &amp; its title</title>\n</head>\n<body>\n<h1>Fixture Page</h1>\n<p>A <a href=\"sub/page.md\">page</a> and <a href=\"index.md\" title=\"home\">home</a>, with <strong>bold</strong>, <em>italic</em> and <code>code</code>.</p>\n<ul>\n<li>one</li>\n<li>two an image</li>\n</ul>\n<p><strong>Name</strong> | <strong>Value</strong></p>\n<p>a | 1</p>\n<pre><code>kept   as\n  written\n</code></pre>\n</body>\n</html>\n"
+
+### a PDF is written as HTML, and Markdown, and text as one code block
+
+```browse
+(write (list (browse-html "tests/fixtures/hello.pdf") (browse-html "tests/fixtures/sub/page.md") (browse-html "tests/fixtures/notes.txt")))
+```
+---
+    ("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>Fixture title</title>\n</head>\n<body>\n<h1>A PDF fixture</h1>\n<p>This paragraph is set on two lines, the first reaching the margin and a word broken across them, in <strong>bold</strong>.</p>\n<p>A second paragraph.</p>\n</body>\n</html>\n" "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>A page</title>\n</head>\n<body>\n<h1>A page</h1>\n<p>Up to the <a href=\"../index.md\">index</a>.</p>\n<h2>Second part</h2>\n<p>The end.</p>\n</body>\n</html>\n" "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>notes.txt</title>\n</head>\n<body>\n<pre><code>plain text\n\twith a tab\n</code></pre>\n</body>\n</html>\n")
+
+### an image has no HTML form
+
+```browse
+(write (guard (e (e msg)) (browse-html "tests/fixtures/dot.png")))
+```
+---
+    "an image has no HTML form"
