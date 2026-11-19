@@ -20,10 +20,10 @@
 ; image, and bytes that start %PDF- a PDF, read into the headings and
 ; paragraphs its text spells (x/codec/pdf-text),
 ; whatever the name or type; a response of any other image type
-; is one this browser cannot show.  A path
-; ending .md, .markdown or .mdown, or a response whose type is
-; text/markdown, is Markdown; one ending .html or .htm, or a response
-; whose type is text/html, is HTML; a directory is a Markdown list of its
+; is one this browser cannot show.  A path whose name ends as one of
+; the platform's formats does (Document formats), or a response whose
+; type is text/markdown or text/html, is Markdown or HTML; a directory is
+; a Markdown list of its
 ; entries; anything else is text.  (doc-blocks DOC) answers the blocks of
 ; either kind, as x/tui/page lays them out.  A form sent by POST loads
 ; its action with the method and the body, (doc-load LOC post BODY), the
@@ -38,8 +38,7 @@
 
 (import x/sys/file)
 (import x/net/http)
-(import x/codec/markdown)
-(import x/codec/html)
+(import x/codec/document)
 (import x/codec/png)
 (import x/codec/gif)
 (import x/codec/base64)
@@ -155,20 +154,6 @@
 
 ; --- documents ---------------------------------------------------------------
 
-(def %markdown-name?
-  (fn (_ loc)
-    (def l (Str8 downcase (first (%cut "?" loc))))
-    (List any? (fn (_ e) (Str8 ends? e l)) (list ".md" ".markdown" ".mdown"))))
-
-(def %markdown (fn (_ text) (pair (lit markdown) (Markdown parse text))))
-
-(def %html-name?
-  (fn (_ loc)
-    (def l (Str8 downcase (first (%cut "?" loc))))
-    (if (Str8 ends? ".html" l) #t (Str8 ends? ".htm" l))))
-
-(def %html (fn (_ text) (pair (lit html) (pair (Html title text) (Html parse text)))))
-
 (def %png? (fn (_ bytes) (Str8 starts? "\x89PNG\r\n\x1a\n" bytes)))
 (def %gif? (fn (_ bytes) (if (Str8 starts? "GIF87a" bytes) #t (Str8 starts? "GIF89a" bytes))))
 (def %picture? (fn (_ bytes) (if (%png? bytes) #t (%gif? bytes))))
@@ -176,25 +161,59 @@
 (def %image
   (fn (_ bytes n)
     (pair (lit image) (if (%png? bytes) (Png decode bytes 0 n) (Gif decode bytes 0 n)))))
-(def %pdf? (fn (_ bytes) (Str8 starts? "%PDF-" bytes)))
-; A PDF's N BYTES as (pdf TITLE . BLOCKS).  The reader is loaded by the
-; first PDF opened, not with the browser.
-(def %pdf
-  (fn (_ bytes n)
-    (import x/codec/pdf-text)
-    (pair (lit pdf) (pair (PdfText title bytes n) (PdfText parse bytes n)))))
+
+; The format a response's TYPE names, of those the platform reads
+; (Document formats), or nil.
+(def %type-format
+  (fn (_ type)
+    (match ((Str8 starts? "text/markdown" type) "markdown")
+           ((Str8 starts? "text/html" type) "html")
+           (#t ()))))
+
+; The format of BYTES found at NAME and served as TYPE: what the bytes'
+; signature says, else the type, else the name's ending, or nil for
+; text.  The platform's table knows the signatures and the endings.
+(def %format-of
+  (fn (_ name type bytes)
+    (def signed (Document format "" bytes))
+    (def typed (%type-format type))
+    (match ((not (null? signed)) signed)
+           ((not (null? typed)) typed)
+           (#t (Document format (first (%cut "?" name)))))))
+
+; TEXT, N bytes of it, as the document FORMAT names: Markdown its blocks,
+; HTML and a PDF their title and blocks, as (Document read) reads them,
+; and text or no format the string.
+(def %document
+  (fn (_ format text n)
+    (def kind (match ((null? format) (lit text))
+                     ((str=? format "markdown") (lit markdown))
+                     ((str=? format "html") (lit html))
+                     ((str=? format "pdf") (lit pdf))
+                     (#t (lit text))))
+    (match ((eq? kind (lit pdf)) (pair kind (Document read format text n)))
+           (#t ((fn (_ s)
+                  (match ((eq? kind (lit text)) (pair kind s))
+                         ((eq? kind (lit markdown)) (pair kind (rest (Document read format s))))
+                         (#t (pair kind (Document read format s)))))
+                (if (< n (Str8 length text)) (Str8 sub 0 n text) text))))))
+
+(def %markdown (fn (_ text) (%document "markdown" text (Str8 length text))))
+
+; The N BYTES found at NAME, AT the location asked for, served as TYPE: a
+; PNG or a GIF by its signature an image, any other image type one this
+; browser cannot show, else the document of their format.
+(def %read
+  (fn (_ at name type bytes n)
+    (match ((%picture? bytes) (%image bytes n))
+           ((if (null? (Document format "" bytes)) (Str8 starts? "image/" type) #f)
+             (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) at))
+           (#t (%document (%format-of name type bytes) bytes n)))))
 ; The type a data: url names, text/plain when it names none.
 (def %data-type
   (fn (_ path)
     ((fn (_ t) (if (str=? t "") "text/plain" t))
      (Str8 downcase (first (%cut ";" (first (%cut "," (Str8 sub 5 (- (Str8 length path) 5) path)))))))))
-
-; TEXT as the document TYPE names: Markdown, HTML, else text.
-(def %typed
-  (fn (_ type text)
-    (match ((str=? type "text/markdown") (%markdown text))
-           ((str=? type "text/html") (%html text))
-           (#t (pair (lit text) text)))))
 
 ; The document a data: url holds, data:[TYPE][;PARAM...][;base64],DATA:
 ; DATA in base64, or percent-encoded without ;base64.  An image is read
@@ -207,16 +226,14 @@
     (if (Str8 ends? ";base64" (Str8 downcase (first parts)))
       ((fn (_ region)
          ((fn (_ bytes n)
-            (match ((%picture? bytes) (%image bytes n))
-                   ((%pdf? bytes) (%pdf bytes n))
-                   ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) path))
-                   (#t (%typed type (Str8 sub 0 n bytes)))))
+            (%read path "" type bytes n))
           (first region) (List ref 2 region)))
        (guard (e (Err raise (lit value) "a data: url whose base64 does not decode" path))
          (Base64 decode-region (rest parts))))
       (if (Str8 starts? "image/" type)
         (Err raise (lit value) (Str8 append "an image in a data: url not in base64: " type) path)
-        (%typed type (Http url-decode (rest parts)))))))
+        ((fn (_ text) (%document (%type-format type) text (Str8 length text)))
+         (Http url-decode (rest parts)))))))
 
 ; Markdown text listing the directory DIR, its entries linked, a
 ; directory's name ending /.
@@ -251,15 +268,7 @@
     (def text (bytes->str body))
     (def type (%header (rest (Assoc find (lit headers) r)) "content-type"))
     (def from ((fn (_ p) (if (null? p) (first (doc-fragment url)) (rest p))) (Assoc find (lit url) r)))
-    (def doc
-      (match ((%picture? text) (%image text (List length body)))
-             ((%pdf? text) (%pdf text (List length body)))
-             ((Str8 starts? "image/" type) (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) url))
-             ((Str8 starts? "text/markdown" type) (%markdown text))
-             ((Str8 starts? "text/html" type) (%html text))
-             ((%markdown-name? from) (%markdown text))
-             ((%html-name? from) (%html text))
-             (#t (pair (lit text) text))))
+    (def doc (%read url from type text (List length body)))
     (if (str=? from (first (doc-fragment url))) doc (pair (lit at) (pair from doc)))))
 
 ; LOC and DOC as (LOC . DOC), a redirected document's (at URL . DOC)
@@ -290,11 +299,7 @@
            (match ((eq? type (lit dir)) (%markdown (%listing path)))
                   ((eq? type (lit file))
                     ((fn (_ text)
-                       (match ((%picture? text) (%image text (Assoc get (lit size) (File stat path))))
-                              ((%pdf? text) (%pdf text (Assoc get (lit size) (File stat path))))
-                              ((%markdown-name? path) (%markdown text))
-                              ((%html-name? path) (%html text))
-                              (#t (pair (lit text) text))))
+                       (%read path path "" text (Assoc get (lit size) (File stat path))))
                      (File read-all path)))
                   ((null? type) (Err raise (lit io) "no such file" path))
                   (#t (Err raise (lit io) "not a file to read" path))))

@@ -16,7 +16,7 @@
 (import x/type/vector)
 (import x/tui/page)
 (import x/tui/picture)
-(import x/codec/markdown)
+(import x/codec/document)
 (import browse/doc doc-resolve doc-load doc-at doc-blocks doc-title)
 
 ; INLINES with each link and image led by "[N]", N counted in BOX.
@@ -82,24 +82,18 @@
          (Page markdown (%mark-blocks (doc-blocks doc) (Vector of 0)) width)))
       (#t (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width))))))))
 
-(def %escaped
-  (fn (_ text)
-    (Str8 replace "<" "&lt;" (Str8 replace ">" "&gt;" (Str8 replace "&" "&amp;" text)))))
-
-; The document at LOC as an HTML page: its blocks as (Markdown html)
-; writes them, under its title.  A text document is one code block; an
-; image has no blocks to write.
+; The document at LOC as an HTML page, as the platform writes one
+; (Document write): its blocks under its title.  A text document is the
+; one block (Document read) reads text as; an image has no blocks to
+; write.
 (def browse-html
   (fn (_ at)
     (def got (doc-at at (doc-load at)))
     (def doc (rest got))
     (when (eq? (first doc) (lit image)) (Err raise (lit value) "an image has no HTML form" at))
-    (Str8 append
-      "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>"
-      (%escaped (doc-title (first got) doc))
-      "</title>\n</head>\n<body>\n"
-      (Markdown html
-        (if (eq? (first doc) (lit text)) (list (list (lit code-block) "" (rest doc))) (doc-blocks doc)))
-      "</body>\n</html>\n")))
+    (first
+      (Document write "html"
+        (if (eq? (first doc) (lit text)) (rest (Document read "text" (rest doc))) (doc-blocks doc))
+        (doc-title (first got) doc)))))
 
 (provide browse/dump browse-dump browse-html)
