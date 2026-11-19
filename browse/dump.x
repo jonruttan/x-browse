@@ -1,6 +1,6 @@
 ; # x-browse -- a terminal browser on x-lang
 ;
-; ## browse/dump.x -- -dump: a document as text
+; ## browse/dump.x -- --dump: a document as text, or as HTML
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
@@ -8,14 +8,16 @@
 ;
 ; As lynx -dump writes one: the document laid out as the browser shows
 ; it, each link's text led by its number in brackets, and after it a
-; list of where the links go, by number.
+; list of where the links go, by number.  As HTML it is the document's
+; blocks, written by the platform's writer.
 
 (module browse/dump)
 
 (import x/type/vector)
 (import x/tui/page)
 (import x/tui/picture)
-(import browse/doc doc-resolve doc-load doc-at doc-blocks)
+(import x/codec/markdown)
+(import browse/doc doc-resolve doc-load doc-at doc-blocks doc-title)
 
 ; INLINES with each link and image led by "[N]", N counted in BOX.
 (def %mark-inlines
@@ -80,4 +82,24 @@
          (Page markdown (%mark-blocks (doc-blocks doc) (Vector of 0)) width)))
       (#t (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width))))))))
 
-(provide browse/dump browse-dump)
+(def %escaped
+  (fn (_ text)
+    (Str8 replace "<" "&lt;" (Str8 replace ">" "&gt;" (Str8 replace "&" "&amp;" text)))))
+
+; The document at LOC as an HTML page: its blocks as (Markdown html)
+; writes them, under its title.  A text document is one code block; an
+; image has no blocks to write.
+(def browse-html
+  (fn (_ at)
+    (def got (doc-at at (doc-load at)))
+    (def doc (rest got))
+    (when (eq? (first doc) (lit image)) (Err raise (lit value) "an image has no HTML form" at))
+    (Str8 append
+      "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>"
+      (%escaped (doc-title (first got) doc))
+      "</title>\n</head>\n<body>\n"
+      (Markdown html
+        (if (eq? (first doc) (lit text)) (list (list (lit code-block) "" (rest doc))) (doc-blocks doc)))
+      "</body>\n</html>\n")))
+
+(provide browse/dump browse-dump browse-html)
