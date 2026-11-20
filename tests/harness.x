@@ -17,7 +17,10 @@
 ; A loader over SITE, ((LOCATION . TEXT) ...), a location ending .html
 ; HTML and any other Markdown, or ((LOCATION . DOCUMENT) ...) for a
 ; document loaded already; a location's query is left off to find it.  A form sent by POST, (LOADER LOC post BODY), is answered with a
-; page saying what was sent.  A location not there is no such file.
+; page saying what was sent, a query as it is and a multipart body as
+; the word multipart, and BODY is kept in spec-posted.  A location not
+; there is no such file.
+(def spec-posted (Vector of ()))
 (def spec-site
   (fn (_ site)
     (fn (_ loc . more)
@@ -29,7 +32,10 @@
         ((null? p) (Err raise (lit io) "no such file" loc))
         ((not (str? (rest p))) (rest p))
         ((not (null? more))
-          (pair (lit markdown) (Markdown parse (Str8 append "# Sent\n\npost " (List ref 1 more)))))
+          (do (Vector set! 0 (List ref 1 more) spec-posted)
+              (pair (lit markdown)
+                    (Markdown parse (Str8 append "# Sent\n\npost "
+                                      (if (str? (List ref 1 more)) (List ref 1 more) "multipart"))))))
         ((Str8 ends? ".html" name) (pair (lit html) (pair (Html title (rest p)) (Html parse (rest p)))))
         (#t (pair (lit markdown) (Markdown parse (rest p))))))))
 
@@ -68,3 +74,16 @@
                            " <input type=radio name=r value=y> <button name=b value=1>Send</button></p></form>"))
         (pair "found.md" "# Found\n\nresults")
         (pair "in.md" "# In")))
+
+; A site with an upload form sent as multipart, and the same fields in a
+; form sent by GET.
+(def spec-uploads
+  (list (pair "up.html"
+              (Str8 append "<title>Up</title><form method=post enctype=multipart/form-data action=\"in.md\">"
+                           "<p><input type=file name=f> <input name=t value=hi> <input type=submit value=Send></p></form>"
+                           "<form action=\"in.md\"><p><input type=file name=g> <input type=submit value=Get></p></form>"))
+        (pair "in.md" "# In")))
+
+; The text of a multipart body, (RUN . CONTENT-TYPE), its bytes up to the
+; first NUL.
+(def spec-run-text (fn (_ body) (Str8 sub 0 (rest (first body)) (first (first body)))))

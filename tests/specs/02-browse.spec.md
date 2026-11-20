@@ -156,6 +156,36 @@ time: the tab bar, the window, and the status line.
 ---
     ("( ) (*) [Send]" "POST in.md                         1-3/3" ("in.md" "Sent" "post r=y&b=1"))
 
+### Enter on a file field asks for a path; a multipart form sends the file whole under its name, then the other fields
+
+```browse
+(def typed (fn (_ s) (List map (fn (_ i) (Str8 sub i 1 s)) (List range 0 (Str8 length s)))))
+(def b (spec-browse 6 40 spec-uploads "up.html" (list 'complete)))
+(def row (fn (_ k) (List ref k (spec-screen b 6 40))))
+(write (list (row 5)
+             (do (List for-each (fn (_ k) (browse-key! b k))
+                   (List append (list 'enter) (typed "tests/fixtures/notes.txt") (list 'enter 'complete 'complete 'enter)))
+                 (list (browse-location b) (row 3)))
+             (rest (Vector ref 0 spec-posted))
+             (spec-run-text (Vector ref 0 spec-posted))))
+```
+---
+    ("file field \"f\"                     1-4/4" ("in.md" "post multipart") "multipart/form-data; boundary=x-lang-form-0" "--x-lang-form-0\r\nContent-Disposition: form-data; name=\"f\"; filename=\"notes.txt\"\r\nContent-Type: application/octet-stream\r\n\r\nplain text\n\twith a tab\n\r\n--x-lang-form-0\r\nContent-Disposition: form-data; name=\"t\"\r\n\r\nhi\r\n--x-lang-form-0--\r\n")
+
+### a file field sent by GET is its file's name; a path that is not a file is said and nothing is sent
+
+```browse
+(def typed (fn (_ s) (List map (fn (_ i) (Str8 sub i 1 s)) (List range 0 (Str8 length s)))))
+(def send (fn (_ path pick)
+  (def b (spec-browse 6 40 spec-uploads "up.html" (List append pick (list 'enter) (typed path) (list 'enter))))
+  (List for-each (fn (_ k) (browse-key! b k)) (if (= (List length pick) 1) (list 'complete 'complete 'enter) (list 'complete 'enter)))
+  (list (browse-location b) (browse-message b))))
+(write (list (send "tests/fixtures/notes.txt" (list 'complete 'complete 'complete 'complete))
+             (send "tests/fixtures/none.txt" (list 'complete))))
+```
+---
+    (("in.md?g=notes.txt" ()) ("up.html" "no file to send: tests/fixtures/none.txt"))
+
 ## images
 
 ### Enter on an image's link shows it: the window empty, the picture fitted to it; back returns and the picture goes
