@@ -120,7 +120,7 @@ independent review.
 
 ## Install
 
-It needs x-lang v0.58.0, the release `lang.xon` declares.
+It needs x-lang v0.59.0, the release `lang.xon` declares.
 
     make install    # into <share>/langs/browse
 
