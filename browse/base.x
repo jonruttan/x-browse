@@ -6,13 +6,13 @@
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
 
-(provide browse/base browse-version browse-main browse-options browse-dump browse-html
+(provide browse/base browse-version browse-main browse-options browse-dump browse-html browse-write
   doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query
   browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit? browse-tabs
   browse-location browse-message browse-pictures)
 
 (import browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query)
-(import browse/dump browse-dump browse-html)
+(import browse/dump browse-dump browse-html browse-write)
 (import browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
   browse-tabs browse-location browse-message browse-pictures)
 (import browse/cli browse-main browse-options browse-version)

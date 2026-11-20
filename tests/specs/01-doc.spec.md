@@ -196,10 +196,26 @@ heading's fragment names, and what loading a location answers.
 ---
     ("<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>Fixture title</title>\n</head>\n<body>\n<h1>A PDF fixture</h1>\n<p>This paragraph is set on two lines, the first reaching the margin and a word broken across them, in <strong>bold</strong>.</p>\n<p>A second paragraph.</p>\n</body>\n</html>\n" "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>A page</title>\n</head>\n<body>\n<h1>A page</h1>\n<p>Up to the <a href=\"../index.md\">index</a>.</p>\n<h2>Second part</h2>\n<p>The end.</p>\n</body>\n</html>\n" "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>notes.txt</title>\n</head>\n<body>\n<pre><code>plain text\n\twith a tab\n</code></pre>\n</body>\n</html>\n")
 
-### an image has no HTML form
+### an image is no document to write
 
 ```browse
 (write (guard (e (e msg)) (browse-html "tests/fixtures/dot.png")))
 ```
 ---
-    "an image has no HTML form"
+    "an image is not a document to write"
+
+## to
+
+### a document written as Markdown, and as a PDF that reads back with its title
+
+```browse
+(import x/codec/document)
+(def out (browse-write "tests/fixtures/page.html" "pdf"))
+(write (list (first (browse-write "tests/fixtures/page.html" "markdown"))
+             (first (browse-write "tests/fixtures/hello.pdf" "markdown"))
+             (Document format "out" (first out))
+             (first (Document read "pdf" (first out) (List ref 2 out)))
+             (guard (e (e msg)) (browse-write "tests/fixtures/dot.png" "pdf"))))
+```
+---
+    ("# Fixture Page\n\nA [page](sub/page.md) and [home](index.md \"home\"), with **bold**, *italic* and `code`.\n\n- one\n- two an image\n\n**Name** | **Value**\n\na | 1\n\n```\nkept   as\n  written\n```\n" "# A PDF fixture\n\nThis paragraph is set on two lines, the first reaching the margin and a word broken across them, in **bold**.\n\nA second paragraph.\n" "pdf" "A Page & its title" "an image is not a document to write")

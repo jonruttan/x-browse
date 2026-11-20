@@ -1,6 +1,6 @@
 ; # x-browse -- a terminal browser on x-lang
 ;
-; ## browse/dump.x -- --dump: a document as text, or as HTML
+; ## browse/dump.x -- --dump and --to: a document as text, or in a format
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
@@ -8,8 +8,8 @@
 ;
 ; As lynx -dump writes one: the document laid out as the browser shows
 ; it, each link's text led by its number in brackets, and after it a
-; list of where the links go, by number.  As HTML it is the document's
-; blocks, written by the platform's writer.
+; list of where the links go, by number.  In another format it is the
+; document's blocks, written by the platform's writer for it.
 
 (module browse/dump)
 
@@ -82,18 +82,20 @@
          (Page markdown (%mark-blocks (doc-blocks doc) (Vector of 0)) width)))
       (#t (Str8 join "" (List map (fn (_ l) (Str8 append l "\n")) (%lines (Page text (rest doc) width))))))))
 
-; The document at LOC as an HTML page, as the platform writes one
-; (Document write): its blocks under its title.  A text document is the
-; one block (Document read) reads text as; an image has no blocks to
-; write.
-(def browse-html
-  (fn (_ at)
+; The document at LOC written as FORMAT, a format the platform writes
+; (Document formats): the file, (BUF START LENGTH), its blocks under its
+; title.  A text document is the one block (Document read) reads text as;
+; an image is no document to write.
+(def browse-write
+  (fn (_ at format)
     (def got (doc-at at (doc-load at)))
     (def doc (rest got))
-    (when (eq? (first doc) (lit image)) (Err raise (lit value) "an image has no HTML form" at))
-    (first
-      (Document write "html"
-        (if (eq? (first doc) (lit text)) (rest (Document read "text" (rest doc))) (doc-blocks doc))
-        (doc-title (first got) doc)))))
+    (when (eq? (first doc) (lit image)) (Err raise (lit value) "an image is not a document to write" at))
+    (Document write format
+      (if (eq? (first doc) (lit text)) (rest (Document read "text" (rest doc))) (doc-blocks doc))
+      (doc-title (first got) doc))))
 
-(provide browse/dump browse-dump browse-html)
+; The document at LOC as an HTML page.
+(def browse-html (fn (_ at) (first (browse-write at "html"))))
+
+(provide browse/dump browse-dump browse-html browse-write)

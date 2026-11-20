@@ -31,9 +31,11 @@
 (import x/tui/screen)
 (import x/tui/tabs)
 (import x/sys/opts)
+(import x/sys/file)
+(import x/codec/document)
 (import browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
   browse-repaint? browse-tabs browse-message browse-pictures)
-(import browse/dump browse-dump browse-html)
+(import browse/dump browse-dump browse-html browse-write)
 
 (def browse-version "0.1.0")
 
@@ -44,7 +46,7 @@
     "A terminal browser for Markdown and HTML, a tab a location.\nA location is a path, an http:// or https:// url, a data: url, or about:help.  Browsing, ? shows the keys."
     (list (Opts flag "-d" "--dump" "Write the first location as text and exit, as lynx -dump does")
           (Opts arg "-w" "--width" "N" "Columns for --dump, 80 unless given, 10 at least")
-          (Opts arg "-t" "--to" "FORMAT" "Write the first location as FORMAT and exit: text, as --dump, or html")
+          (Opts arg "-t" "--to" "FORMAT" "Write the first location as FORMAT and exit: text, as --dump, or markdown, html or pdf")
           (Opts flag "-V" "--version" "Print the version and exit")
           (Opts flag "-h" "--help" "Print this help and exit"))
     (pair (lit help) #f)))
@@ -54,12 +56,29 @@
 (def %to-int
   (fn (_ s) (guard (e ()) ((prim-ref (lit convert) (lit to)) s (Type named INTEGER) 10))))
 
-; The first of LOCS written in FORMAT, "text" or "html".
+; The formats --to takes, the platform's: their names.
+(def %formats (fn (_) (List map first (Document formats))))
+
+; The whole of FILE, (BUF START LENGTH), written to FD: a PDF is bytes,
+; and its length is not a string's.
+(def %emit
+  (fn (self fd file)
+    (def n (List ref 2 file))
+    (when (< 0 n)
+      ((fn (_ wrote)
+         (if (< wrote 1) (Err raise (lit io) "cannot write" ())
+           (self fd (list (first file) (+ (List ref 1 file) wrote) (- n wrote)))))
+       (File write fd (if (= (List ref 1 file) 0) (first file) (Str8 sub (List ref 1 file) n (first file))) n)))))
+
+; The first of LOCS written in FORMAT: text is the dump, the document laid
+; out as the browser shows it with its links listed; any other is the
+; platform's writer for it.
 (def %dump
   (fn (_ locs width format)
     (if (null? locs) (do (%say 2 (Opts usage browse-options)) 2)
       (guard (e (do (%say 2 (Str8 append "x-browse: " (%err-text e) ": " (first locs) "\n")) 1))
-        (do (%say 1 (if (str=? format "html") (browse-html (first locs)) (browse-dump (first locs) width))) 0)))))
+        (do (if (str=? format "text") (%say 1 (browse-dump (first locs) width)) (%emit 1 (browse-write (first locs) format)))
+            0)))))
 
 (def %err-text
   (fn (_ e)
@@ -170,8 +189,8 @@
       ((Opts on? opts "-V") (do (%say 1 (Str8 append "x-browse " browse-version "\n")) 0))
       ((if (null? width) #t (< width 10))
         (do (%say 2 "x-browse: --width takes a number of columns, 10 or more\n") 2))
-      ((not (List includes? format (list "text" "html")))
-        (do (%say 2 (Str8 append "x-browse: --to takes text or html, not " format "\n")) 2))
+      ((not (List includes? format (%formats)))
+        (do (%say 2 (Str8 append "x-browse: --to takes " (Str8 join ", " (%formats)) ", not " format "\n")) 2))
       ((if (Opts on? opts "-d") #t (not (null? (Opts value opts "-t")))) (%dump locs width format))
       (#t (%browse (if (null? locs) (list ".") locs))))))
 
