@@ -40,6 +40,7 @@
       "A form's fields are selected as links are, with `Tab` and `p`."
       ""
       "- `Enter` on a text field: type its text, `Enter` to keep it, `Esc` to leave it"
+      "- `Enter` on a file field: type the path of the file to send"
       "- `Enter` on a checkbox or radio button: turn it on or off"
       "- `Enter` on a select: its next option"
       "- `Enter` on a button: send the form; `t`: send it to a new tab"

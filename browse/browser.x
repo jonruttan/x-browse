@@ -16,10 +16,12 @@
 ; spec drives it with keys and reads the screen back.
 ;
 ; A form's fields are selected as links are.  Enter on a text field asks
-; for its text, on a checkbox or radio button turns it on or off, on a
-; select moves to its next option, and on a submit button sends the form:
-; by GET as its action with the fields as the query, by POST through the
-; loader with them as the body.  A field's value lives in the tab's
+; for its text, on a file field for the path of the file to send, on a
+; checkbox or radio button turns it on or off, on a select moves to its
+; next option, and on a submit button sends the form: by GET as its
+; action with the fields as the query, by POST through the loader with
+; them as the body, a multipart one with its files when the form's
+; encoding is multipart.  A field's value lives in the tab's
 ; document, whose field inline is rewritten, so going back finds the
 ; values as they were left.
 ;
@@ -39,7 +41,8 @@
 ; its row.  An image that does not load stays its brackets alone.
 ;
 ; Documents are loaded by the browser's loader, (doc-load LOC) unless
-; one is given, and (LOADER LOC post BODY) for a form sent by POST: a
+; one is given, and (LOADER LOC post BODY) for a form sent by POST, BODY
+; a query or a multipart (RUN . CONTENT-TYPE): a
 ; spec loads from a list instead.
 
 (module browse/browser)
@@ -53,7 +56,8 @@
 (import x/tui/window)
 (import x/tui/tabs)
 (import x/tui/picture)
-(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-at doc-blocks doc-title doc-query)
+(import x/type/path)
+(import browse/doc doc-resolve doc-fragment doc-slug doc-load doc-at doc-blocks doc-title doc-query doc-multipart)
 
 ; A browser is a vector: 0 the tabs, 1 each tab's state in the tabs'
 ; order, 2 rows, 3 columns, 4 the message shown, 5 the question being
@@ -340,23 +344,35 @@
                 (#t (self (rest os)))))
        opts))))
 
-; The (NAME . VALUE) pairs the form numbered FORM sends from BLOCKS: its
-; named fields in order, a checkbox or radio button only when on, a
-; submit button only the one pressed, field PRESSED.
+; What the form numbered FORM sends from BLOCKS: its named fields in
+; order, a checkbox or radio button only when on, a submit button only the
+; one pressed, field PRESSED.  Each is (NAME . VALUE), but a file field is
+; (NAME PATH) when the form is MULTIPART, its file sent whole, and else
+; (NAME . FILE), the file's name alone, as a browser sends it.
 (def %form-params
-  (fn (_ blocks form pressed)
+  (fn (_ blocks form pressed multipart)
     (def out (Vector of ()))
-    (def add! (fn (_ y) (Vector set! 0 (pair (pair (%f-name y) (%f-value y)) (Vector ref 0 out)) out)))
+    (def add! (fn (_ p) (Vector set! 0 (pair p (Vector ref 0 out)) out)))
     (%map-fields blocks
       (fn (_ j y)
         (when (if (null? (%f-name y)) #f (eq? (%f-form-index y) form))
           ((fn (_ t)
-             (match ((eq? t (lit submit)) (when (= j pressed) (add! y)))
-                    ((match ((eq? t (lit checkbox)) #t) (#t (eq? t (lit radio)))) (when (%f-on y) (add! y)))
-                    (#t (add! y))))
+             (match ((eq? t (lit submit)) (when (= j pressed) (add! (pair (%f-name y) (%f-value y)))))
+                    ((match ((eq? t (lit checkbox)) #t) (#t (eq? t (lit radio))))
+                      (when (%f-on y) (add! (pair (%f-name y) (%f-value y)))))
+                    ((eq? t (lit file))
+                      (add! (if multipart (list (%f-name y) (%f-value y))
+                              (pair (%f-name y) (if (str=? (%f-value y) "") "" (Path basename (%f-value y)))))))
+                    (#t (add! (pair (%f-name y) (%f-value y))))))
            (%f-type y)))
         y))
     (List reverse (Vector ref 0 out))))
+
+; Whether FORM, (INDEX ACTION METHOD ENCODING), is sent by POST as
+; multipart, the encoding that carries files.
+(def %multipart?
+  (fn (_ form)
+    (if (eq? (List ref 2 form) (lit post)) (eq? (List ref 3 form) (lit multipart)) #f)))
 
 ; URL with PARAMS as its query, in place of any it has.
 (def %with-query
@@ -371,16 +387,28 @@
     (def form (%f-form x))
     (def action (first (doc-fragment (doc-resolve (Vector ref 0 (%state b)) (List ref 1 form)))))
     (if (eq? (List ref 2 form) (lit post)) action
-      (%with-query action (%form-params (doc-blocks (Vector ref 1 (%state b))) (first form) pressed)))))
+      (%with-query action (%form-params (doc-blocks (Vector ref 1 (%state b))) (first form) pressed #f)))))
+
+; The body the form of X sends by POST, button K pressed: a query, or a
+; multipart body with its files; nil, said on the status line, when a
+; file it names cannot be read.
+(def %form-body
+  (fn (_ b x k)
+    (def form (%f-form x))
+    (def multipart (%multipart? form))
+    (def params (%form-params (doc-blocks (Vector ref 1 (%state b))) (first form) k multipart))
+    (if (not multipart) (doc-query params)
+      (guard (e (do (%say! b (%err-text e)) ()))
+        (doc-multipart params)))))
 
 (def %submit!
   (fn (_ b x k where)
     (def form (%f-form x))
-    (if (null? form) (%say! b "a button in no form")
-      (if (eq? (List ref 2 form) (lit post))
-        (browse-open! b (%form-target b x k) where (lit post)
-                      (doc-query (%form-params (doc-blocks (Vector ref 1 (%state b))) (first form) k)))
-        (browse-open! b (%form-target b x k) where)))))
+    (match ((null? form) (%say! b "a button in no form"))
+           ((eq? (List ref 2 form) (lit post))
+             ((fn (_ body) (unless (null? body) (browse-open! b (%form-target b x k) where (lit post) body)))
+              (%form-body b x k)))
+           (#t (browse-open! b (%form-target b x k) where)))))
 
 ; Enter on the selected field X.
 (def %act-field!
@@ -410,6 +438,7 @@
       ((eq? t (lit select)) (Str8 append "select" named))
       ((eq? t (lit textarea)) (Str8 append "text area" named))
       ((eq? t (lit password)) (Str8 append "password field" named))
+      ((eq? t (lit file)) (Str8 append "file field" named))
       (#t (Str8 append "text field" named)))))
 
 ; Where the selected link goes, or what the selected field is; nil with

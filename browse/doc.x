@@ -27,7 +27,9 @@
 ; entries; anything else is text.  (doc-blocks DOC) answers the blocks of
 ; either kind, as x/tui/page lays them out.  A form sent by POST loads
 ; its action with the method and the body, (doc-load LOC post BODY), the
-; body a query (doc-query) answers: application/x-www-form-urlencoded.
+; body a query (doc-query) answers, application/x-www-form-urlencoded, or
+; for a form whose encoding is multipart, (RUN . CONTENT-TYPE) as
+; (doc-multipart) answers it, the files its file fields name sent whole.
 ;
 ; A web location that redirects answers (at URL . DOC), URL where the
 ; document came from: (doc-at LOC DOC) answers (LOC . DOC) with that
@@ -42,6 +44,7 @@
 (import x/codec/png)
 (import x/codec/gif)
 (import x/codec/base64)
+(import x/type/path)
 (import browse/help browse-help)
 
 ; --- locations ---------------------------------------------------------------
@@ -258,9 +261,9 @@
 
 (def %fetch
   (fn (_ url method body)
-    (def r (if (eq? method (lit post))
-             (Http post (first (doc-fragment url)) body (list (pair "Content-Type" "application/x-www-form-urlencoded")))
-             (Http get (first (doc-fragment url)))))
+    (def r (match ((not (eq? method (lit post))) (Http get (first (doc-fragment url))))
+                  ((str? body) (Http post (first (doc-fragment url)) body (list (pair "Content-Type" "application/x-www-form-urlencoded"))))
+                  (#t (Http post (first (doc-fragment url)) (first body) (list (pair "Content-Type" (rest body)))))))
     (def status (rest (Assoc find (lit status) r)))
     (unless (if (< 199 status) (< status 300) #f)
       (Err raise (lit io) (Str8 append "HTTP " (%number->str status)) url))
@@ -314,6 +317,25 @@
         (fn (_ p) (Str8 replace "%20" "+" (Str8 append (Http url-encode (first p)) "=" (Http url-encode (rest p)))))
         params))))
 
+; PARAMS as a form whose encoding is multipart sends them, (RUN .
+; CONTENT-TYPE): each (NAME . VALUE) a text part, and each (NAME PATH) a
+; file field's, the file at PATH sent whole under its name without its
+; directories.  A file field left empty is a part with no file name and
+; no bytes, as a browser sends one.  A PATH that is not a file raises.
+(def doc-multipart
+  (fn (_ params)
+    (Http multipart
+      (List map
+        (fn (_ p)
+          (match ((str? (rest p)) p)
+                 ((str=? (first (rest p)) "") (list (first p) "" (list "" 0 0)))
+                 (#t ((fn (_ path)
+                        (unless (eq? (File type path) (lit file)) (Err raise (lit io) (Str8 append "no file to send: " path) path))
+                        (list (first p) (Path basename path)
+                              (list (File read-all path) 0 (Assoc get (lit size) (File stat path)))))
+                      (first (rest p))))))
+        params))))
+
 ; The plain text of INLINES.
 (def %inline-text
   (fn (self inlines)
@@ -354,4 +376,4 @@
          (first (doc-fragment loc))))
       (#t (%inline-text (List ref 2 h))))))
 
-(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query)
+(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query doc-multipart)

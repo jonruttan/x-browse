@@ -39,7 +39,8 @@ headings and paragraphs, read from where the file places its glyphs.
     o               open a location        O              open one in a new tab
     r               load the document again
 
-    Enter           on a text field, type its text; on a checkbox or a radio
+    Enter           on a text field, type its text; on a file field, the
+                    path of the file to send; on a checkbox or a radio
                     button, turn it on or off; on a select, its next option;
                     on a button, send the form (t sends it to a new tab)
 
@@ -73,7 +74,10 @@ padded with underscores, a checkbox as `[ ]` or `[X]`, a radio button as
 its label in brackets.  They are selected as links are, and the bottom
 line says what the selected one is.  `Enter` on a button sends the form:
 by GET it opens the action with the fields as the query, by POST it
-sends them as the body, `application/x-www-form-urlencoded`.  What is
+sends them as the body, `application/x-www-form-urlencoded`, or
+`multipart/form-data` when the form's `enctype` says so.  A file field
+holds a path: a multipart form sends the file there whole under its
+name, and any other form sends the name alone.  What is
 typed into a form stays with the document in its tab, so going back
 finds it as it was left.
 
@@ -131,8 +135,8 @@ It needs x-lang v0.59.0, the release `lang.xon` declares.
 
 ## Not yet
 
-Images other than PNG and GIF, images in `data:` urls not in base64, and files
-sent from a form.  A table is shown a line a row.  A PDF's images, links,
+Images other than PNG and GIF, and images in `data:` urls not in base64.
+A table is shown a line a row.  A PDF's images, links,
 tables and columns, and an encrypted PDF.
 
 ## Licence
