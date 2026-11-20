@@ -39,3 +39,12 @@ accepts is what usage prints, in short and --long spellings.
 ```
 ---
     ("html" ("a.md") 2)
+
+### --to takes every format the platform writes
+
+```browse
+(import x/sys/opts)
+(write (List map (fn (_ f) (Opts value (Opts parse browse-options (list "-t" f "a.md")) "-t")) (list "text" "markdown" "html" "pdf")))
+```
+---
+    ("text" "markdown" "html" "pdf")

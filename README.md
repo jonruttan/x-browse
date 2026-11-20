@@ -93,13 +93,14 @@ wider than the columns.
 ## --to
 
 `-t FORMAT`, `--to FORMAT`, writes the document on standard output in a
-format: `text`, as `--dump` writes it, or `html`, a page holding the
-document's blocks under its title.  A Markdown file, an HTML page or a
-PDF goes in and HTML comes out; a text file is one code block, and an
-image has no HTML form.
+format: `text`, as `--dump` writes it, or one the platform writes,
+`markdown`, `html` or `pdf`, the document's blocks under its title.  A
+Markdown file, an HTML page or a PDF goes in and any of them comes out;
+a text file is one code block, and an image is no document to write.
 
     x -l browse -- -t html notes.md > notes.html
-    x -l browse -- -t html paper.pdf > paper.html
+    x -l browse -- -t markdown paper.pdf > paper.md
+    x -l browse -- -t pdf https://example.com/ > page.pdf
 
 ## Images
 
