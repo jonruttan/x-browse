@@ -1,6 +1,6 @@
 ; # x-browse -- a terminal browser on x-lang
 ;
-; ## browse/browser.x -- tabs of documents, the keys, and what is drawn
+; ## lib/browse/browser.x -- tabs of documents, the keys, and what is drawn
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan

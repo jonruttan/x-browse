@@ -20,8 +20,8 @@ Each location given opens in a tab of its own; with none, the browser
 opens the current directory.  A file ending `.md`, `.markdown` or
 `.mdown`, or a response of type `text/markdown`, is read as Markdown; one
 ending `.html` or `.htm`, or a response of type `text/html`, as HTML,
-shown as the same headings, lists, quotes, code and links, a table as a
-line a row; a directory is shown as a list of its entries, linked;
+shown as the same headings, lists, quotes, code, links and tables;
+a directory is shown as a list of its entries, linked;
 anything else is shown as text.  A file or response whose bytes start
 `%PDF-` is a PDF, whatever its name or type: its text is shown as
 headings and paragraphs, read from where the file places its glyphs.
@@ -125,9 +125,9 @@ independent review.
 
 ## Install
 
-It needs x-lang v0.59.0, the release `lang.xon` declares.
+It needs x-lang v0.60.0, the release `bundle.xon` declares.
 
-    make install    # into <share>/langs/browse
+    make install    # into <share>/bundles/browse
 
 ## Tests
 
@@ -137,7 +137,7 @@ It needs x-lang v0.59.0, the release `lang.xon` declares.
 ## Not yet
 
 Images other than PNG and GIF, and images in `data:` urls not in base64.
-A table is shown a line a row.  A PDF's images, links,
+A PDF's images,
 tables and columns, and an encrypted PDF.
 
 ## Licence
