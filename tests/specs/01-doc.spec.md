@@ -149,7 +149,7 @@ heading's fragment names, and what loading a location answers.
              (doc-title "tests/fixtures/sub/page.md" (doc-load "tests/fixtures/sub/page.md"))))
 ```
 ---
-    ('html "A Page & its title" (('heading 1 ("Fixture Page")) ('paragraph ("A " ('link "sub/page.md" () ("page")) " and " ('link "index.md" "home" ("home")) ", with " ('strong ("bold")) ", " ('emph ("italic")) " and " ('code "code") ".")) ('list #f () #t ((('paragraph ("one"))) (('paragraph ("two an image"))))) ('paragraph (('strong ("Name")) " | " ('strong ("Value")))) ('paragraph ("a | 1")) ('code-block "" "kept   as\n  written\n")) "A page")
+    ('html "A Page & its title" (('heading 1 ("Fixture Page")) ('paragraph ("A " ('link "sub/page.md" () ("page")) " and " ('link "index.md" "home" ("home")) ", with " ('strong ("bold")) ", " ('emph ("italic")) " and " ('code "code") ".")) ('list #f () #t ((('paragraph ("one"))) (('paragraph ("two an image"))))) ('table #t (() ()) ((("Name") ("Value")) (("a") ("1")))) ('code-block "" "kept   as\n  written\n")) "A page")
 
 ### -dump of an HTML page: the links numbered and resolved against it
 
@@ -157,7 +157,7 @@ heading's fragment names, and what loading a location answers.
 (write (browse-dump "tests/fixtures/page.html" 40))
 ```
 ---
-    "Fixture Page\n\nA [1]page and [2]home, with bold, italic\nand code.\n\n• one\n• two an image\n\nName | Value\n\na | 1\n\nkept   as\n  written\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/index.md\n"
+    "Fixture Page\n\nA [1]page and [2]home, with bold, italic\nand code.\n\n• one\n• two an image\n\nName │ Value\n─────┼──────\na    │ 1\n\nkept   as\n  written\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/index.md\n"
 
 ## pdf
 
@@ -186,7 +186,7 @@ heading's fragment names, and what loading a location answers.
 (write (browse-html "tests/fixtures/page.html"))
 ```
 ---
-    "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>A Page &amp; its title</title>\n</head>\n<body>\n<h1>Fixture Page</h1>\n<p>A <a href=\"sub/page.md\">page</a> and <a href=\"index.md\" title=\"home\">home</a>, with <strong>bold</strong>, <em>italic</em> and <code>code</code>.</p>\n<ul>\n<li>one</li>\n<li>two an image</li>\n</ul>\n<p><strong>Name</strong> | <strong>Value</strong></p>\n<p>a | 1</p>\n<pre><code>kept   as\n  written\n</code></pre>\n</body>\n</html>\n"
+    "<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n<title>A Page &amp; its title</title>\n</head>\n<body>\n<h1>Fixture Page</h1>\n<p>A <a href=\"sub/page.md\">page</a> and <a href=\"index.md\" title=\"home\">home</a>, with <strong>bold</strong>, <em>italic</em> and <code>code</code>.</p>\n<ul>\n<li>one</li>\n<li>two an image</li>\n</ul>\n<table>\n<thead>\n<tr>\n<th>Name</th>\n<th>Value</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>a</td>\n<td>1</td>\n</tr>\n</tbody>\n</table>\n<pre><code>kept   as\n  written\n</code></pre>\n</body>\n</html>\n"
 
 ### a PDF is written as HTML, and Markdown, and text as one code block
 
@@ -218,4 +218,4 @@ heading's fragment names, and what loading a location answers.
              (guard (e (e msg)) (browse-write "tests/fixtures/dot.png" "pdf"))))
 ```
 ---
-    ("# Fixture Page\n\nA [page](sub/page.md) and [home](index.md \"home\"), with **bold**, *italic* and `code`.\n\n- one\n- two an image\n\n**Name** | **Value**\n\na | 1\n\n```\nkept   as\n  written\n```\n" "# A PDF fixture\n\nThis paragraph is set on two lines, the first reaching the margin and a word broken across them, in **bold**.\n\nA second paragraph.\n" "pdf" "A Page & its title" "an image is not a document to write")
+    ("# Fixture Page\n\nA [page](sub/page.md) and [home](index.md \"home\"), with **bold**, *italic* and `code`.\n\n- one\n- two an image\n\n| Name | Value |\n| --- | --- |\n| a | 1 |\n\n```\nkept   as\n  written\n```\n" "# A PDF fixture\n\nThis paragraph is set on two lines, the first reaching the margin and a word broken across them, in **bold**.\n\nA second paragraph.\n" "pdf" "A Page & its title" "an image is not a document to write")

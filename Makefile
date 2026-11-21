@@ -1,20 +1,20 @@
-# Install copies this bundle to <share>/langs/browse, where `x -l` looks: a lang is
+# Install copies this bundle to <share>/bundles/browse, where `x -l` looks: a bundle is
 # installed when its files are there. No registry, no database.
 
 X ?= x
 
-# The version is derived from git describe, never committed: lang.xon declares
-# what this lang requires; the installed artifact carries what it is.
+# The version is derived from git describe, never committed: bundle.xon declares
+# what this bundle requires; the installed artifact carries what it is.
 LANG_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 SHARE := $(if $(PREFIX),$(PREFIX)/share/x,$(shell $(X) --share-dir))
-DEST  := $(SHARE)/langs/browse
+DEST  := $(SHARE)/bundles/browse
 
-# What a consumer needs to run the lang: the declaration, the entry, the
-# modules.  Not the suite, not the tooling, not CI.
-PAYLOAD := lang.xon run.x browse
+# What a consumer needs to run the bundle: the declaration and lib/, which
+# holds the entry and the modules.  Not the suite, not the tooling, not CI.
+PAYLOAD := bundle.xon lib
 
 .PHONY: install
-install: ## Install into <share>/langs/browse
+install: ## Install into <share>/bundles/browse
 	@test -n "$(SHARE)" || { echo "x-browse: cannot find an x tree -- set PREFIX or X" >&2; exit 1; }
 	@test -d "$(SHARE)" || { echo "x-browse: no x tree at $(SHARE)" >&2; exit 1; }
 	rm -rf "$(DEST)"

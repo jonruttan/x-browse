@@ -1,12 +1,17 @@
 ; # x-browse -- a terminal browser on x-lang
 ;
-; ## run.x -- the entry
+; ## lib/browse/run.x -- the entry, the module browse/run
 ;
 ; @description `x -l browse -- [OPTIONS] [LOCATION ...]`.
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
 ; @license MIT No Attribution (MIT-0)
-(import browse/base)
+;
+; Importing it sets the session up and starts nothing; main runs the
+; command the operands spell, and with none leaves the prompt to the
+; wrapper.
+(module browse/run)
+(import browse/base browse-main)
 
 (set! %lang-name "browse")
 (set! %repl-prompt "browse> ")
@@ -18,5 +23,10 @@
   (fn (_ a) (List any? (fn (_ f) (str=? a f)) (list "--batch" "--quiet" "--no-color"))))
 (def %operands
   (fn (self l) (if (if (null? l) #f (%engine-flag? (first l))) (self (rest l)) l)))
-(let ((ops (%operands (rest (Sys args (lit program))))))
-  (unless (null? ops) (Sys exit (browse-main ops))))
+
+(def main
+  (fn (_)
+    (let ((ops (%operands (rest (Sys args (lit program))))))
+      (unless (null? ops) (Sys exit (browse-main ops))))))
+
+(provide browse/run main)

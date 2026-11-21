@@ -1,6 +1,6 @@
 ; # x-browse -- a terminal browser on x-lang
 ;
-; ## browse/dump.x -- --dump and --to: a document as text, or in a format
+; ## lib/browse/dump.x -- --dump and --to: a document as text, or in a format
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan

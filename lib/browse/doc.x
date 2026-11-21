@@ -1,6 +1,6 @@
 ; # x-browse -- a terminal browser on x-lang
 ;
-; ## browse/doc.x -- locations, and the documents found at them
+; ## lib/browse/doc.x -- locations, and the documents found at them
 ;
 ; @author [Jon Ruttan](jonruttan@gmail.com)
 ; @copyright 2026 Jon Ruttan
