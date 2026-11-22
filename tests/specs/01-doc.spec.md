@@ -139,6 +139,14 @@ heading's fragment names, and what loading a location answers.
 ---
     "Fixtures\n\nA [1]page and the [2]same page.\n\n• Italic and bold\n• [3]Back home\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/sub/page.md#second-part\n   3. tests/fixtures/index.md\n"
 
+### a link in a table's cell is numbered as any other
+
+```browse
+(write (browse-dump "tests/fixtures/table.md" 40))
+```
+---
+    "Table\n\nPage   │  Where\n───────┼────────\n[1]one │ [2]home\n\nReferences\n\n   1. tests/fixtures/sub/page.md\n   2. tests/fixtures/index.md\n"
+
 ## html
 
 ### an HTML file: its title, its blocks as Markdown's, and its links resolved as Markdown's are
