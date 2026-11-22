@@ -46,6 +46,9 @@
           ((eq? (first b) (lit list))
             (list (lit list) (List ref 1 b) (List ref 2 b) (List ref 3 b)
                   (List map (fn (_ item) (self item box)) (List ref 4 b))))
+          ((eq? (first b) (lit table))
+            (list (lit table) (List ref 1 b) (List ref 2 b)
+                  (List map (fn (_ row) (List map (fn (_ cell) (%mark-inlines cell box)) row)) (List ref 3 b))))
           (#t b)))
       blocks)))
 

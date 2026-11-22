@@ -145,6 +145,17 @@ time: the tab bar, the window, and the status line.
 ---
     ("found.md?q=du&c=1&s=a" "Found" ("form.html" "Q: du__________________ [X] [a] [Go]") "Q: du__________________ [X] [a] [Go]")
 
+### a field in a table's cell is selected and sent as any other
+
+```browse
+(def b (spec-browse 6 40 (list (pair "grid.html" "<form action=\"found.md\"><table><tr><td>Q<td><input name=q></table><input type=submit value=Go></form>")
+                               (pair "found.md" "# Found"))
+                    "grid.html" (list 'complete 'enter "d" 'enter 'complete 'enter)))
+(write (browse-location b))
+```
+---
+    "found.md?q=d"
+
 ### a radio button turns the others of its group off; a form sent by POST goes through the loader with its body
 
 ```browse
