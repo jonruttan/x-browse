@@ -140,14 +140,27 @@
             (self b screen reader shown colours))
         (Term key reader)))))
 
+; The garbage a key made collected once its frame is shown, and only when
+; no key waits: a collect of a large page's heap takes longer than the
+; frame, so keys typed ahead are answered first.  Keys that never stop
+; coming still collect every 32nd.
+(def %uncollected 0)
+(def %collect!
+  (fn (_ reader)
+    (set! %uncollected (+ %uncollected 1))
+    (when (if (< 31 %uncollected) #t
+            (if (reader #t) #f (null? (Sys poll (list (pair 0 (list (lit in)))) 0))))
+      (Heap collect)
+      (set! %uncollected 0))))
+
 (def %loop
   (fn (self b screen reader shown colours)
     (%show! b screen shown colours)
     (unless (browse-quit? b)
+      (%collect! reader)
       ((fn (_ key)
          (unless (null? key)
            (do (browse-key! b key)
-               (Heap collect)
                (self b screen reader shown colours))))
        (%key b screen reader shown colours)))))
 
