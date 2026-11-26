@@ -133,6 +133,11 @@ It needs x-lang v0.60.0, the release `bundle.xon` declares.
 
     make test X=/path/to/x
     make check X=/path/to/x
+    make card X=/path/to/x
+
+[docs/card.md](docs/card.md) is the card: the locations, the options, the
+keys and the forms in tables, and rows that `make card` runs over the
+fixtures.
 
 ## Not yet
 
