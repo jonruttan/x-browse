@@ -5,6 +5,7 @@
 ```sh
 x -l browse -- [LOCATION ...]             # browse; a tab a location; q quits
 x -l browse                               # the current directory
+CMD | x -l browse -- -                    # a page piped in, shown as it comes
 x -l browse -- -d [-w N] LOCATION         # the document as text, and exit
 x -l browse -- -t FORMAT LOCATION         # the document in a format, and exit
 x -l browse -- -d tests/fixtures/notes.txt | sed 1q -> plain text
@@ -18,6 +19,7 @@ x -l browse -- -d nosuchfile 2>&1 -> x-browse: no such file: nosuchfile
 | `http://` `https://`   | a page; https is x-lang's own TLS 1.3            |
 | `data:TYPE,TEXT`       | the document in the url itself                   |
 | `about:help`           | the keys                                         |
+| `-`                    | standard input: HTML when it starts `<!doctype html` or `<html` |
 | `.md` `.markdown`, `text/markdown` | read as Markdown                     |
 | `.html` `.htm`, `text/html` | read as HTML                                |
 | bytes starting `%PDF-` | a PDF: its text, as headings and paragraphs      |
@@ -36,6 +38,8 @@ x -l browse -- -d 'data:text/html,<form><input value=a></form>' | tr -s _ -> a_
 x -l browse -- -t markdown 'data:text/html,<h1>Hi</h1>' -> # Hi
 x -l browse -- -t markdown tests/fixtures/page.html | sed 1q -> # Fixture Page
 x -l browse -- -t no LICENSE 2>&1 | cut -d, -f1 -> x-browse: --to takes markdown
+printf '<!doctype html><h1>Hi</h1>' | x -l browse -- -d - -> Hi
+printf 'plain *text*' | x -l browse -- -d - -> plain *text*
 ```
 
 | Option                 | Does                                             |

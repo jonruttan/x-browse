@@ -251,6 +251,22 @@
           (Vector set! 1 (rest got) s)
           ((fn (_ w) (%show! b w (first got) (rest got) (Window top w) (Window selected w))) (%window b))))))
 
+; Every tab whose document is at LOC loaded again where it stands, its
+; top line and selected link kept: for a document that grows as it is
+; read, standard input's.  The history is left as it is.
+(def browse-refresh!
+  (fn (_ b loc)
+    ((fn (self k states)
+       (unless (null? states)
+         (do (when (str=? (Vector ref 0 (first states)) loc)
+               ((fn (_ got w)
+                  (unless (null? got)
+                    (do (Vector set! 1 (rest got) (first states))
+                        (%show! b w loc (rest got) (Window top w) (Window selected w)))))
+                (%load b loc ()) (Tabs window (%tabs b) k)))
+             (self (+ k 1) (rest states)))))
+     0 (%get b 1))))
+
 ; --- fields ------------------------------------------------------------------
 
 ; A field inline, (field TYPE NAME VALUE ON OPTIONS FORM) as x/codec/html
@@ -734,5 +750,5 @@
                 ()))
             (Page links (Window page w)))))))
 
-(provide browse/browser browse-make browse-open! browse-key! browse-resize! browse-draw! browse-quit?
+(provide browse/browser browse-make browse-open! browse-refresh! browse-key! browse-resize! browse-draw! browse-quit?
   browse-repaint? browse-tabs browse-location browse-message browse-pictures)

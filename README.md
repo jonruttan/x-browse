@@ -15,9 +15,14 @@ scripts, applies no stylesheets and keeps no cookies.
     x -l browse -- -V | -h
 
 A location is a path, a `file://`, `http://` or `https://` url, a `data:`
-url, or `about:help`.
+url, `about:help`, or `-` for standard input.
 Each location given opens in a tab of its own; with none, the browser
-opens the current directory.  A file ending `.md`, `.markdown` or
+opens the current directory, or standard input when that is not a
+terminal, so `CMD | x -l browse` pages CMD's output as `more` does.
+Standard input is shown as it comes, its first screen before the input
+ends, and the keys are read from the terminal.  It has no name or type:
+it is HTML when it starts `<!doctype html` or `<html`, a PNG, a GIF or a
+PDF by its first bytes, and otherwise text.  A file ending `.md`, `.markdown` or
 `.mdown`, or a response of type `text/markdown`, is read as Markdown; one
 ending `.html` or `.htm`, or a response of type `text/html`, as HTML,
 shown as the same headings, lists, quotes, code, links and tables;

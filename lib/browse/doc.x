@@ -24,7 +24,10 @@
 ; the platform's formats does (Document formats), or a response whose
 ; type is text/markdown or text/html, is Markdown or HTML; a directory is
 ; a Markdown list of its
-; entries; anything else is text.  (doc-blocks DOC) answers the blocks of
+; entries; anything else is text.  Bytes read from standard input have
+; no name and no type: (doc-piped BYTES N) reads them as a page that
+; starts <!doctype html or <html is HTML, else by their signature, else
+; as text.  (doc-blocks DOC) answers the blocks of
 ; either kind, as x/tui/page lays them out.  A form sent by POST loads
 ; its action with the method and the body, (doc-load LOC post BODY), the
 ; body a query (doc-query) answers, application/x-www-form-urlencoded, or
@@ -212,6 +215,30 @@
            ((if (null? (Document format "" bytes)) (Str8 starts? "image/" type) #f)
              (Err raise (lit value) (Str8 append "an image this browser cannot show: " type) at))
            (#t (%document (%format-of name type bytes) bytes n)))))
+; Where TEXT's first byte past white space is, from I.
+(def %unspaced
+  (fn (self text i)
+    (if (if (< i (Str8 length text)) (List includes? (Str8 ref i text) (list #\space #\tab #\newline #\return)) #f)
+      (self text (+ i 1))
+      i)))
+; Whether TEXT, past its leading white space, opens as an HTML page does:
+; <!doctype html or <html, in any case.
+(def %html-start?
+  (fn (_ text)
+    (def i (%unspaced text 0))
+    (def head "<!doctype html")
+    ((fn (_ t) (if (Str8 starts? head t) #t (Str8 starts? "<html" t)))
+     (Str8 downcase (Str8 sub i (if (< (- (Str8 length text) i) (Str8 length head)) (- (Str8 length text) i) (Str8 length head)) text)))))
+
+; The document of N BYTES read from standard input, which has no name and
+; no type: a PNG or a GIF an image and %PDF- a PDF, by their signatures,
+; an HTML page by its start, and anything else text.
+(def doc-piped
+  (fn (_ bytes n)
+    (if (if (null? (Document format "" bytes)) (%html-start? bytes) #f)
+      (%document "html" bytes n)
+      (%read "-" "" "" bytes n))))
+
 ; The type a data: url names, text/plain when it names none.
 (def %data-type
   (fn (_ path)
@@ -376,4 +403,4 @@
          (first (doc-fragment loc))))
       (#t (%inline-text (List ref 2 h))))))
 
-(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-at doc-blocks doc-title doc-query doc-multipart)
+(provide browse/doc doc-scheme? doc-web? doc-fragment doc-resolve doc-slug doc-load doc-piped doc-at doc-blocks doc-title doc-query doc-multipart)
