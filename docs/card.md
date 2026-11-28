@@ -19,7 +19,7 @@ x -l browse -- -d nosuchfile 2>&1 -> x-browse: no such file: nosuchfile
 | `http://` `https://`   | a page; https is x-lang's own TLS 1.3            |
 | `data:TYPE,TEXT`       | the document in the url itself                   |
 | `about:help`           | the keys                                         |
-| `-`                    | standard input: HTML when it starts `<!doctype html` or `<html` |
+| `-`                    | standard input, a page piped in                  |
 | `.md` `.markdown`, `text/markdown` | read as Markdown                     |
 | `.html` `.htm`, `text/html` | read as HTML                                |
 | bytes starting `%PDF-` | a PDF: its text, as headings and paragraphs      |
