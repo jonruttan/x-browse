@@ -9,7 +9,8 @@
 ; As lynx -dump writes one: the document laid out as the browser shows
 ; it, each link's text led by its number in brackets, and after it a
 ; list of where the links go, by number.  In another format it is the
-; document's blocks, written by the platform's writer for it.
+; document's blocks, written by the platform's writer for it.  The
+; document is loaded by (doc-load LOC) unless a loader is given.
 
 (module browse/dump)
 
@@ -62,8 +63,8 @@
 ; drawn as the page draws them, unnumbered: the page numbers them with
 ; the links, the references list only the links.
 (def browse-dump
-  (fn (_ at width)
-    (def got (doc-at at (doc-load at)))
+  (fn (_ at width . loader)
+    (def got (doc-at at ((if (null? loader) doc-load (first loader)) at)))
     (def loc (first got))
     (def doc (rest got))
     (match
@@ -90,8 +91,8 @@
 ; title.  A text document is the one block (Document read) reads text as;
 ; an image is no document to write.
 (def browse-write
-  (fn (_ at format)
-    (def got (doc-at at (doc-load at)))
+  (fn (_ at format . loader)
+    (def got (doc-at at ((if (null? loader) doc-load (first loader)) at)))
     (def doc (rest got))
     (when (eq? (first doc) (lit image)) (Err raise (lit value) "an image is not a document to write" at))
     (Document write format

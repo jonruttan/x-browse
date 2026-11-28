@@ -113,6 +113,20 @@ heading's fragment names, and what loading a location answers.
 ---
     (('text . "hi there!") ('markdown ('heading 1 ("Hi")) ('paragraph ("There."))) "Hi" "an image in a data: url not in base64: image/svg+xml" "a data: url with no comma")
 
+### standard input has no name or type: HTML by its start, in any case past white space, an image by its signature, anything else text
+
+```browse
+(def piped (fn (_ s) (doc-piped s (Str8 length s))))
+(def png "tests/fixtures/dot.png")
+(write (list (List map (fn (_ s) (first (piped s)))
+               (list "  \n<!DOCTYPE HTML><h1>Hi</h1>" "<html><p>x</p></html>" "plain <b>text</b>" "# Not *Markdown*" "" "<!doctype htm"))
+             (doc-title "-" (piped "<!doctype html><title>T</title><p>x</p>"))
+             (piped "a <b>\n")
+             (List take 3 (doc-piped (File read-all png) (Assoc get 'size (File stat png))))))
+```
+---
+    (('html 'html 'text 'text 'text 'text) "T" ('text . "a <b>\n") ('image 2 1))
+
 ## dump
 
 ### an image: its picture in half blocks and 24-bit colour

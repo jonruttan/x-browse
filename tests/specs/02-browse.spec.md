@@ -224,3 +224,25 @@ time: the tab bar, the window, and the status line.
 ```
 ---
     ((" 1 Pics" "Pics" "" "A dot: [a dot]" "" "here." "" "None: [gone]" "images inline            1-7/9") "images inline" ((4 . "\x1b[0;38;2;255;0;0m▀\x1b[0;38;2;0;255;0m▀\x1b[0m")) ((3 . "\x1b[0;38;5;196m▀\x1b[0;38;5;46m▀\x1b[0m")) ("images as links" () "A dot: [a dot] here."))
+
+## standard input
+
+### a document that grows is loaded again where it stands: the top line kept, the other tabs left as they were
+
+```browse
+(def box (Vector of "a\nb\nc\nd\n"))
+(def site (spec-site spec-pages))
+(def b (browse-make 4 24 (fn (_ loc . more) (if (str=? loc "-") (pair 'text (Vector ref 0 box)) (site loc)))))
+(browse-open! b "-" 'tab)
+(browse-open! b "one.md" 'tab)
+(browse-key! b "1")
+(browse-key! b "j")
+(def before (spec-screen b 4 24))
+(Vector set! 0 "a\nb\nc\nd\ne\nf\ng\n" box)
+(browse-refresh! b "-")
+(def after (spec-screen b 4 24))
+(browse-key! b ">")
+(write (list before after (spec-screen b 4 24)))
+```
+---
+    ((" 1 -         2 One" "b" "c" "-                  2-3/4") (" 1 -         2 One" "b" "c" "-                  2-3/7") (" 1 -         2 One" "One" "" "one.md             1-2/3"))
